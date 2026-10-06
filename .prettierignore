@@ -1,0 +1,11 @@
+.agents/
+.codex/
+.specify/scripts/
+.specify/templates/
+.specify/workflows/
+.next/
+node_modules/
+coverage/
+build/
+out/
+pnpm-lock.yaml

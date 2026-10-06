@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Redmine Workspace
 
-## Getting Started
+Interfaz web para iniciar sesión con una API Key de Redmine y consultar las incidencias permitidas para esa cuenta.
 
-First, run the development server:
+## Requisitos
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 22.13 o posterior.
+- Acceso REST API habilitado en la instancia Redmine por su administrador.
+- HTTPS en producción.
+
+## Configuración local
+
+```sh
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Configura `REDMINE_BASE_URL` con la URL de la única instancia Redmine y define `IRON_SESSION_PASSWORD` con un secreto aleatorio de al menos 32 caracteres. Puedes generarlo con `openssl rand -base64 32`. No compartas ni subas el secreto al repositorio.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+pnpm install
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Abre <http://localhost:3000>.
 
-## Learn More
+## Validación
 
-To learn more about Next.js, take a look at the following resources:
+Consulta la [guía de inicio y escenarios de aceptación](specs/001-redmine-api-key-auth/quickstart.md) para validar la conexión, la persistencia y el cierre de sesión.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Formato de código
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Prettier define el formato compartido del proyecto y `eslint-config-prettier` desactiva reglas de ESLint que podrían contradecirlo. `eslint-plugin-simple-import-sort` ordena los imports mediante ESLint. En ambas IDE, selecciona Prettier instalado desde este proyecto para usar `.prettierrc.json` y activa ESLint autofix al guardar si quieres que los imports se ordenen automáticamente (en VS Code, `source.fixAll.eslint`; en WebStorm, `Run eslint --fix on save`).
 
-## Deploy on Vercel
+```sh
+pnpm format
+pnpm format:check
+pnpm lint
+pnpm lint --fix
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Organización del código
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app` contiene las entradas de ruta que requiere Next.js (`page.tsx`, `route.ts`, `layout.tsx`); cada `page.tsx` puede incluir la composición y UI propias de esa página.
+- `src/modules/<feature>` agrupa el código reutilizable o propio de cada funcionalidad (`auth`, `issues`, `redmine`), organizado en carpetas pobladas por responsabilidad como `components`, `helpers` o `handlers`.
+- `src/shared` contiene código de aplicación reutilizado por más de un módulo.
+- Los nombres de archivo usan kebab-case, excepto los nombres que Next.js exige para sus rutas y layouts.
+- Mantén cada módulo cohesivo; crea solo las subcarpetas que agrupen archivos existentes y aclaren su responsabilidad.

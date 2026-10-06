@@ -6,10 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "format": "prettier --write src specs .specify/memory/constitution.md README.md package.json eslint.config.mjs next.config.ts tsconfig.json .prettierrc.json",
+    "format:check": "prettier --check src specs .specify/memory/constitution.md README.md package.json eslint.config.mjs next.config.ts tsconfig.json .prettierrc.json"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.1",
+    "iron-session": "^9.0.1",
+    "lucide-react": "1.52.0",
     "next": "16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -26,6 +30,9 @@
     "daisyui": "5.7.47",
     "eslint": "9",
     "eslint-config-next": "16.3.8",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
+    "prettier": "^3.9.9",
     "tailwindcss": "4",
     "typescript": "5"
   },
