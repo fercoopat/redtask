@@ -1,8 +1,19 @@
 import { clearSession, getAuthenticatedSession } from "@/modules/auth/helpers/session";
-import { getRedmineIssues, RedmineRequestError } from "@/modules/redmine/helpers/redmine-api";
+import {
+  standardIssueFilters,
+  validateIssueFilters,
+} from "@/modules/issues/helpers/issue-filter-options";
+import { parseIssueListQuery } from "@/modules/issues/helpers/issue-list-query";
+import {
+  getRedmineIssueFilterOptions,
+  getRedmineIssues,
+  RedmineRequestError,
+} from "@/modules/redmine/helpers/redmine-api";
 import { jsonResponse } from "@/shared/http";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const query = parseIssueListQuery(new URL(request.url).searchParams);
+  if (!query) return jsonResponse({ error: "Los filtros o la paginación no son válidos." }, 400);
   try {
     const session = await getAuthenticatedSession();
     if (!session) {
@@ -14,7 +25,25 @@ export async function GET() {
       return jsonResponse({ error: "Inicia sesión para ver tus incidencias." }, 401);
     }
 
-    const page = await getRedmineIssues(session.apiKey);
+    let filterOptions = standardIssueFilters;
+    if (query.filters.some((filter) => filter.field.startsWith("cf_"))) {
+      try {
+        filterOptions = await getRedmineIssueFilterOptions(session.apiKey);
+      } catch (error) {
+        if (error instanceof RedmineRequestError && error.failure === "forbidden")
+          return jsonResponse(
+            { error: "Los campos personalizados no están disponibles para tu cuenta." },
+            400,
+          );
+        throw error;
+      }
+    }
+    if (!validateIssueFilters(query.filters, filterOptions))
+      return jsonResponse(
+        { error: "Uno o más filtros no son válidos o ya no están disponibles." },
+        400,
+      );
+    const page = await getRedmineIssues(session.apiKey, query);
     return jsonResponse(page);
   } catch (error) {
     if (error instanceof RedmineRequestError) {
