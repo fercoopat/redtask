@@ -2,34 +2,37 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import useSWRMutation from "swr/mutation";
 import { z } from "zod";
 
-import { apiKeySchema } from "../helpers/schemas";
-
-const formSchema = z.object({ apiKey: apiKeySchema });
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = { apiKey: string };
 type ApiError = { error?: string };
 
-async function submitApiKey(url: string, { arg }: { arg: FormValues }) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(arg),
-  });
-  const payload = (await response.json().catch(() => ({}))) as ApiError;
-  if (!response.ok) {
-    throw new Error(payload.error ?? "No se pudo iniciar sesión. Inténtalo de nuevo.");
+async function submitApiKey(url: string, { arg }: { arg: FormValues & { fallback: string } }) {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apiKey: arg.apiKey }),
+    });
+  } catch {
+    throw new Error(arg.fallback);
   }
+  const payload = (await response.json().catch(() => ({}))) as ApiError;
+  if (!response.ok) throw new Error(payload.error ?? arg.fallback);
   return payload;
 }
 
 export function LoginForm() {
+  const t = useTranslations();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const { trigger, isMutating } = useSWRMutation("/api/auth/session", submitApiKey);
+  const formSchema = z.object({ apiKey: z.string().trim().min(1, t("apiKeyRequired")) });
   const {
     register,
     handleSubmit,
@@ -45,12 +48,10 @@ export function LoginForm() {
     reset({ apiKey: "" });
 
     try {
-      await trigger({ apiKey });
+      await trigger({ apiKey, fallback: t("loginFailed") });
       router.replace("/issues");
     } catch (error) {
-      setFormError(
-        error instanceof Error ? error.message : "No se pudo iniciar sesión. Inténtalo de nuevo.",
-      );
+      setFormError(error instanceof Error ? error.message : t("loginFailed"));
     }
   };
 
@@ -58,7 +59,7 @@ export function LoginForm() {
     <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div className="space-y-2">
         <label htmlFor="apiKey" className="label font-medium">
-          API Key
+          {t("apiKeyLabel")}
         </label>
         <input
           {...register("apiKey")}
@@ -67,7 +68,7 @@ export function LoginForm() {
           autoComplete="off"
           autoCapitalize="none"
           spellCheck={false}
-          placeholder="Pega tu API Key de Redmine"
+          placeholder={t("apiKeyPlaceholder")}
           aria-invalid={Boolean(errors.apiKey)}
           aria-describedby={errors.apiKey ? "apiKey-error" : "apiKey-help"}
           className={`input input-bordered w-full focus-visible:outline-2 focus-visible:outline-offset-2 ${errors.apiKey ? "input-error" : ""}`}
@@ -78,7 +79,7 @@ export function LoginForm() {
           </p>
         ) : (
           <p id="apiKey-help" className="text-sm text-base-content/60">
-            La clave se usa solo para conectar esta sesión.
+            {t("apiKeyHelp")}
           </p>
         )}
       </div>
@@ -95,7 +96,7 @@ export function LoginForm() {
         className="btn btn-primary w-full focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         {isMutating && <span className="loading loading-spinner loading-sm" aria-hidden="true" />}
-        {isMutating ? "Conectando…" : "Conectar con Redmine"}
+        {isMutating ? t("loggingIn") : t("connectRedmine")}
       </button>
     </form>
   );

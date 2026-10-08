@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import useSWR from "swr";
@@ -21,6 +22,7 @@ import {
 import { buildIssueListUrl } from "@/modules/issues/helpers/issue-list-query";
 import { issuePageSizes } from "@/modules/issues/helpers/issue-list-query";
 import type { RedmineIssuePage } from "@/modules/redmine/helpers/redmine-api";
+import { LocaleSwitcher } from "@/shared/i18n/locale-switcher";
 
 type ResponseError = Error & { status: number };
 type ApiError = { error?: string };
@@ -35,35 +37,38 @@ const draftSchema = z.object({
 async function readError(response: Response) {
   return (await response.json().catch(() => ({}))) as ApiError;
 }
-async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { cache: "no-store" });
+async function fetchJson<T>(url: string, fallback: string): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(url, { cache: "no-store" });
+  } catch {
+    throw new Error(fallback);
+  }
   if (!response.ok) {
     const payload = await readError(response);
-    const error = new Error(payload.error ?? "No se pudo completar la solicitud.") as ResponseError;
+    const error = new Error(payload.error ?? fallback) as ResponseError;
     error.status = response.status;
     throw error;
   }
   return (await response.json()) as T;
 }
-async function fetchIssues(url: string) {
-  return fetchJson<RedmineIssuePage>(url);
+async function fetchIssues(url: string, fallback: string) {
+  return fetchJson<RedmineIssuePage>(url, fallback);
 }
-async function fetchFilters(url: string) {
-  return fetchJson<FilterResponse>(url);
+async function fetchFilters(url: string, fallback: string) {
+  return fetchJson<FilterResponse>(url, fallback);
 }
-async function endSession(url: string) {
-  const response = await fetch(url, { method: "DELETE" });
+async function endSession(url: string, fallback: string) {
+  let response: Response;
+  try {
+    response = await fetch(url, { method: "DELETE" });
+  } catch {
+    throw new Error(fallback);
+  }
   if (!response.ok) {
     const payload = await readError(response);
-    throw new Error(payload.error ?? "No se pudo cerrar la sesión.");
+    throw new Error(payload.error ?? fallback);
   }
-}
-function formatDate(value: string) {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf())
-    ? "—"
-    : new Intl.DateTimeFormat("es", { dateStyle: "medium" }).format(date);
 }
 function isSupported(filters: IssueFilterCriterion[], fields: IssueFilterOption[]) {
   return filters.every((filter) =>
@@ -76,6 +81,8 @@ function isSupported(filters: IssueFilterCriterion[], fields: IssueFilterOption[
 }
 
 export function IssueList({ user }: { user: RedmineUser }) {
+  const t = useTranslations();
+  const format = useFormatter();
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [preferences, setPreferences] = useState<IssueListPreferences>({
@@ -96,18 +103,75 @@ export function IssueList({ user }: { user: RedmineUser }) {
     data: filterData,
     error: filterError,
     mutate: mutateFilters,
-  } = useSWR<FilterResponse, ResponseError>("/api/issues/filters", fetchFilters);
+  } = useSWR<FilterResponse, ResponseError>("/api/issues/filters", (url: string) =>
+    fetchFilters(url, t("filtersLoadError")),
+  );
   const redmineInstance = filterData?.instance ?? "";
-  const fields = filterData?.fields ?? [];
+  const fieldLabels: Record<string, string> = {
+    status_id: t("filterFields.status_id"),
+    tracker_id: t("filterFields.tracker_id"),
+    priority_id: t("filterFields.priority_id"),
+    project_id: t("filterFields.project_id"),
+    author_id: t("filterFields.author_id"),
+    assigned_to_id: t("filterFields.assigned_to_id"),
+    category_id: t("filterFields.category_id"),
+    fixed_version_id: t("filterFields.fixed_version_id"),
+    parent_id: t("filterFields.parent_id"),
+    watcher_id: t("filterFields.watcher_id"),
+    subject: t("filterFields.subject"),
+    description: t("filterFields.description"),
+    created_on: t("filterFields.created_on"),
+    updated_on: t("filterFields.updated_on"),
+    closed_on: t("filterFields.closed_on"),
+    start_date: t("filterFields.start_date"),
+    due_date: t("filterFields.due_date"),
+    done_ratio: t("filterFields.done_ratio"),
+    estimated_hours: t("filterFields.estimated_hours"),
+    is_private: t("filterFields.is_private"),
+  };
+  const operatorLabels: Record<string, string> = {
+    "=": t("filterOperators.equal"),
+    "!": t("filterOperators.notEqual"),
+    "~": t("filterOperators.contains"),
+    "!~": t("filterOperators.notContains"),
+    ">=": t("filterOperators.from"),
+    "<=": t("filterOperators.through"),
+    ">": t("filterOperators.greaterThan"),
+    "<": t("filterOperators.lessThan"),
+  };
+  const specialOperatorLabels: Record<string, string> = {
+    "status_id:o": t("filterOperators.open"),
+    "status_id:c": t("filterOperators.closed"),
+    "status_id:*": t("filterOperators.any"),
+    "subject:*": t("filterOperators.notEmpty"),
+    "subject:!*": t("filterOperators.empty"),
+  };
+  const fields = (filterData?.fields ?? []).map((field) => ({
+    ...field,
+    label: fieldLabels[field.field] ?? field.label,
+    operators: field.operators.map((operator) => ({
+      ...operator,
+      label:
+        specialOperatorLabels[`${field.field}:${operator.value}`] ??
+        operatorLabels[operator.value] ??
+        operator.label,
+    })),
+    values:
+      field.field === "is_private"
+        ? field.values?.map((item) => ({ ...item, label: item.value === "1" ? t("yes") : t("no") }))
+        : field.values,
+  }));
   const queryUrl = useMemo(
     () => buildIssueListUrl(page, preferences.pageSize, filters),
     [page, preferences.pageSize, filters],
   );
   const { data, error, isLoading, mutate } = useSWR<RedmineIssuePage, ResponseError>(
     preferencesReady ? queryUrl : null,
-    fetchIssues,
+    (url: string) => fetchIssues(url, t("issuesLoadError")),
   );
-  const { trigger, isMutating } = useSWRMutation("/api/auth/session", endSession);
+  const { trigger, isMutating } = useSWRMutation("/api/auth/session", (url: string) =>
+    endSession(url, t("logoutFailed")),
+  );
   const draftForm = useForm<FilterDraft>({
     resolver: zodResolver(draftSchema),
     defaultValues: { field: "status_id", operator: "=", value: "" },
@@ -145,9 +209,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
       setLogoutSuccess(true);
       window.setTimeout(() => router.replace("/login"), 500);
     } catch (err) {
-      setLogoutError(
-        err instanceof Error ? err.message : "No se pudo cerrar la sesión. Inténtalo de nuevo.",
-      );
+      setLogoutError(err instanceof Error ? err.message : t("logoutFailed"));
     }
   };
   const changeFilters = (next: IssueFilterCriterion[]) => {
@@ -158,11 +220,11 @@ export function IssueList({ user }: { user: RedmineUser }) {
   const submitDraft = draftForm.handleSubmit((draft) => {
     if (!chosenField) return;
     if (filters.some((filter, index) => filter.field === draft.field && index !== editIndex)) {
-      draftForm.setError("field", { message: "Ya existe un filtro para este campo." });
+      draftForm.setError("field", { message: t("duplicateFilter") });
       return;
     }
     if (chosenOperator?.requiresValue && !draft.value.trim()) {
-      draftForm.setError("value", { message: "Escribe un valor para este filtro." });
+      draftForm.setError("value", { message: t("filterValueRequired") });
       return;
     }
     const criterion = {
@@ -189,7 +251,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
   const saveCurrentFilter = () => {
     const name = filterName.trim();
     if (!name) {
-      setNameError("Escribe un nombre para guardar el filtro.");
+      setNameError(t("saveFilterNameRequired"));
       return;
     }
     const saved = { id: crypto.randomUUID(), name, filters: [...filters] };
@@ -205,7 +267,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
   const renameSaved = () => {
     const name = filterName.trim();
     if (!selectedSaved || !name) {
-      setNameError("Escribe un nombre para el filtro guardado.");
+      setNameError(t("renameFilterNameRequired"));
       return;
     }
     setPreferences((current) => ({
@@ -238,7 +300,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
   if (error?.status === 401)
     return (
       <main className="grid min-h-screen place-items-center bg-base-200 p-6">
-        <p role="status">La sesión terminó. Volviendo al inicio de sesión…</p>
+        <p role="status">{t("sessionEnded")}</p>
       </main>
     );
   return (
@@ -253,18 +315,19 @@ export function IssueList({ user }: { user: RedmineUser }) {
           <span className="text-lg font-semibold tracking-tight">Redmine Workspace</span>
         </div>
         <div className="flex items-center gap-3">
+          <LocaleSwitcher />
           <div className="hidden text-right sm:block">
-            <p className="text-xs text-base-content/55">Conectado como</p>
+            <p className="text-xs text-base-content/55">{t("connectedAs")}</p>
             <p className="text-sm font-medium">{user.login}</p>
           </div>
           <button
             type="button"
             onClick={logout}
             disabled={isMutating || logoutSuccess}
-            aria-label="Cerrar sesión de Redmine"
+            aria-label={t("logoutAria")}
             className="btn btn-outline btn-sm focus-visible:outline-2 focus-visible:outline-offset-2"
           >
-            {isMutating ? "Cerrando…" : "Cerrar sesión"}
+            {isMutating ? t("loggingOut") : t("logout")}
           </button>
         </div>
       </div>
@@ -272,29 +335,30 @@ export function IssueList({ user }: { user: RedmineUser }) {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="space-y-2">
             <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-              Tu trabajo
+              {t("work")}
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight">Incidencias</h1>
-            <p className="text-base-content/60">
-              Las incidencias disponibles para tu cuenta de Redmine.
-            </p>
+            <h1 className="text-3xl font-semibold tracking-tight">{t("issues")}</h1>
+            <p className="text-base-content/60">{t("issuesDescription")}</p>
           </div>
           {data && (
             <span className="badge badge-ghost px-3 py-4">
-              {data.issues.length} de {data.totalCount}
+              {t("issueCount", {
+                shown: format.number(data.issues.length),
+                total: format.number(data.totalCount),
+              })}
             </span>
           )}
         </div>
         {logoutSuccess && (
           <p role="status" className="alert alert-success py-3">
-            Sesión cerrada correctamente. Volviendo al inicio de sesión…
+            {t("logoutSuccess")}
           </p>
         )}
         {logoutError && (
           <p role="alert" className="alert alert-error py-3">
             {logoutError}
             <button type="button" onClick={logout} className="btn btn-sm" disabled={isMutating}>
-              Reintentar
+              {t("retry")}
             </button>
           </p>
         )}
@@ -303,10 +367,10 @@ export function IssueList({ user }: { user: RedmineUser }) {
             <form
               onSubmit={submitDraft}
               className="grid gap-3 md:grid-cols-[1fr_1fr_2fr_auto]"
-              aria-label="Añadir filtro de incidencias"
+              aria-label={t("addIssueFilter")}
             >
               <label className="form-control">
-                <span className="label-text mb-1">Campo</span>
+                <span className="label-text mb-1">{t("field")}</span>
                 <select
                   className="select select-bordered"
                   {...draftForm.register("field")}
@@ -317,7 +381,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                     draftForm.setValue("value", "");
                   }}
                 >
-                  <optgroup label="Campos visibles">
+                  <optgroup label={t("visibleFields")}>
                     {fields
                       .filter((field) => preferences.visibleFields.includes(field.field))
                       .map((field) => (
@@ -326,7 +390,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                         </option>
                       ))}
                   </optgroup>
-                  <optgroup label="Todos los campos">
+                  <optgroup label={t("allFields")}>
                     {fields
                       .filter((field) => !preferences.visibleFields.includes(field.field))
                       .map((field) => (
@@ -343,7 +407,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                 )}
               </label>
               <label className="form-control">
-                <span className="label-text mb-1">Condición</span>
+                <span className="label-text mb-1">{t("condition")}</span>
                 <select
                   className="select select-bordered"
                   {...draftForm.register("operator")}
@@ -361,10 +425,10 @@ export function IssueList({ user }: { user: RedmineUser }) {
               </label>
               {chosenOperator?.requiresValue ? (
                 <label className="form-control">
-                  <span className="label-text mb-1">Valor</span>
+                  <span className="label-text mb-1">{t("value")}</span>
                   {chosenField?.values ? (
                     <select className="select select-bordered" {...draftForm.register("value")}>
-                      <option value="">Selecciona un valor</option>
+                      <option value="">{t("selectValue")}</option>
                       {chosenField.values.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
@@ -381,7 +445,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                             ? "number"
                             : "text"
                       }
-                      aria-label="Valor del filtro"
+                      aria-label={t("filterValue")}
                       {...draftForm.register("value")}
                     />
                   )}
@@ -392,17 +456,19 @@ export function IssueList({ user }: { user: RedmineUser }) {
                   )}
                 </label>
               ) : (
-                <div className="self-end pb-3 text-sm text-base-content/60">No requiere valor</div>
+                <div className="self-end pb-3 text-sm text-base-content/60">
+                  {t("noValueRequired")}
+                </div>
               )}
               <button
                 className="btn btn-primary self-end"
                 type="submit"
                 disabled={editIndex === null && filters.length >= 20}
               >
-                {editIndex === null ? "Añadir" : "Guardar cambio"}
+                {editIndex === null ? t("add") : t("saveChange")}
               </button>
             </form>
-            <div className="flex flex-wrap gap-2" aria-label="Filtros activos">
+            <div className="flex flex-wrap gap-2" aria-label={t("activeFilters")}>
               {filters.map((filter, index) => {
                 const field = fields.find((option) => option.field === filter.field);
                 const operator = field?.operators.find(
@@ -417,14 +483,14 @@ export function IssueList({ user }: { user: RedmineUser }) {
                     {filter.value ? ` ${filter.value}` : ""}
                     <button
                       type="button"
-                      aria-label={`Editar filtro ${field?.label ?? filter.field}`}
+                      aria-label={t("editFilter", { field: field?.label ?? filter.field })}
                       onClick={() => editFilter(index)}
                     >
-                      Editar
+                      {t("edit")}
                     </button>
                     <button
                       type="button"
-                      aria-label={`Quitar filtro ${field?.label ?? filter.field}`}
+                      aria-label={t("removeFilter", { field: field?.label ?? filter.field })}
                       onClick={() => changeFilters(filters.filter((_, i) => i !== index))}
                     >
                       ×
@@ -441,23 +507,23 @@ export function IssueList({ user }: { user: RedmineUser }) {
                     setEditIndex(null);
                   }}
                 >
-                  Borrar todos
+                  {t("clearAll")}
                 </button>
               )}
             </div>
             <div className="flex flex-wrap items-end gap-2 border-t border-base-300 pt-4">
               <label className="form-control min-w-52">
-                <span className="label-text mb-1">Filtros guardados</span>
+                <span className="label-text mb-1">{t("savedFilters")}</span>
                 <select
                   className="select select-bordered select-sm"
                   value={selectedSavedId}
                   onChange={(event) => setSelectedSavedId(event.target.value)}
                 >
-                  <option value="">Selecciona un filtro</option>
+                  <option value="">{t("selectFilter")}</option>
                   {preferences.savedFilters.map((saved) => (
                     <option key={saved.id} value={saved.id}>
                       {saved.name}
-                      {isSupported(saved.filters, fields) ? "" : " (requiere revisión)"}
+                      {isSupported(saved.filters, fields) ? "" : ` ${t("needsReview")}`}
                     </option>
                   ))}
                 </select>
@@ -468,7 +534,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                 disabled={!selectedSaved || !isSupported(selectedSaved.filters, fields)}
                 onClick={applySelectedSaved}
               >
-                Aplicar
+                {t("apply")}
               </button>
               <button
                 type="button"
@@ -476,7 +542,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                 disabled={!selectedSaved}
                 onClick={applySelectedSaved}
               >
-                Editar criterios
+                {t("editCriteria")}
               </button>
               <button
                 type="button"
@@ -484,7 +550,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                 disabled={!selectedSaved}
                 onClick={updateSaved}
               >
-                Actualizar
+                {t("update")}
               </button>
               <button
                 type="button"
@@ -492,10 +558,10 @@ export function IssueList({ user }: { user: RedmineUser }) {
                 disabled={!selectedSaved}
                 onClick={removeSaved}
               >
-                Eliminar
+                {t("delete")}
               </button>
               <label className="form-control min-w-48 flex-1">
-                <span className="label-text mb-1">Nombre del filtro</span>
+                <span className="label-text mb-1">{t("filterName")}</span>
                 <input
                   className="input input-bordered input-sm"
                   maxLength={100}
@@ -508,7 +574,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                 className="btn btn-sm"
                 onClick={selectedSaved ? renameSaved : saveCurrentFilter}
               >
-                {selectedSaved ? "Renombrar" : "Guardar filtro"}
+                {selectedSaved ? t("rename") : t("saveFilter")}
               </button>
               {nameError && (
                 <span role="alert" className="text-sm text-error">
@@ -517,9 +583,9 @@ export function IssueList({ user }: { user: RedmineUser }) {
               )}
             </div>
             <details className="border-t border-base-300 pt-3">
-              <summary className="cursor-pointer font-medium">Personalizar campos visibles</summary>
+              <summary className="cursor-pointer font-medium">{t("customizeFields")}</summary>
               <fieldset className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-                <legend className="sr-only">Campos de filtro visibles</legend>
+                <legend className="sr-only">{t("visibleFilterFields")}</legend>
                 {fields.map((field) => (
                   <label key={field.field} className="label cursor-pointer gap-2">
                     <input
@@ -546,7 +612,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
           <div role="alert" className="alert alert-warning">
             <span className="flex-1">{filterError.message}</span>
             <button type="button" className="btn btn-sm" onClick={() => mutateFilters()}>
-              Reintentar filtros
+              {t("retryFilters")}
             </button>
           </div>
         )}
@@ -554,24 +620,22 @@ export function IssueList({ user }: { user: RedmineUser }) {
           <div role="status" className="card border border-base-300 bg-base-100 shadow-sm">
             <div className="card-body flex-row items-center gap-3 text-base-content/65">
               <span className="loading loading-spinner loading-sm" aria-hidden="true" />
-              Cargando incidencias…
+              {t("loadingIssues")}
             </div>
           </div>
         ) : error ? (
           <div role="alert" className="alert alert-warning">
             <span className="flex-1">{error.message}</span>
             <button type="button" onClick={() => mutate()} className="btn btn-sm btn-outline">
-              Reintentar
+              {t("retry")}
             </button>
           </div>
         ) : data?.issues.length === 0 ? (
           <div className="card border border-base-300 bg-base-100 shadow-sm">
             <div className="card-body items-center py-14 text-center">
-              <h2 className="text-lg font-semibold">No hay incidencias para mostrar</h2>
+              <h2 className="text-lg font-semibold">{t("noIssues")}</h2>
               <p className="text-sm text-base-content/60">
-                {filters.length
-                  ? "Prueba a cambiar o quitar algún filtro."
-                  : "Cuando tengas incidencias disponibles, aparecerán aquí."}
+                {filters.length ? t("changeFilters") : t("noIssuesHint")}
               </p>
             </div>
           </div>
@@ -582,12 +646,12 @@ export function IssueList({ user }: { user: RedmineUser }) {
                 <thead>
                   <tr>
                     <th scope="col">ID</th>
-                    <th scope="col">Asunto</th>
-                    <th scope="col">Proyecto</th>
-                    <th scope="col">Estado</th>
-                    <th scope="col">Prioridad</th>
-                    <th scope="col">Asignado a</th>
-                    <th scope="col">Actualizada</th>
+                    <th scope="col">{t("subject")}</th>
+                    <th scope="col">{t("project")}</th>
+                    <th scope="col">{t("status")}</th>
+                    <th scope="col">{t("priority")}</th>
+                    <th scope="col">{t("assignee")}</th>
+                    <th scope="col">{t("updated")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -603,7 +667,11 @@ export function IssueList({ user }: { user: RedmineUser }) {
                       <td>{issue.status || "—"}</td>
                       <td>{issue.priority || "—"}</td>
                       <td>{issue.assignedTo || "—"}</td>
-                      <td className="whitespace-nowrap">{formatDate(issue.updatedAt)}</td>
+                      <td className="whitespace-nowrap">
+                        {issue.updatedAt && !Number.isNaN(new Date(issue.updatedAt).valueOf())
+                          ? format.dateTime(new Date(issue.updatedAt), { dateStyle: "medium" })
+                          : "—"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -611,9 +679,9 @@ export function IssueList({ user }: { user: RedmineUser }) {
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-5 py-3 text-sm">
               <label className="flex items-center gap-2">
-                Por página
+                {t("perPage")}
                 <select
-                  aria-label="Issues por página"
+                  aria-label={t("issuesPerPage")}
                   className="select select-bordered select-sm"
                   value={preferences.pageSize}
                   onChange={(event) => {
@@ -633,12 +701,15 @@ export function IssueList({ user }: { user: RedmineUser }) {
               </label>
               <div className="flex items-center gap-2">
                 <span>
-                  Página {currentPage} · {data.totalCount} issues
+                  {t("pageSummary", {
+                    page: format.number(currentPage),
+                    total: format.number(data.totalCount),
+                  })}
                 </span>
                 <button
                   type="button"
                   className="btn btn-sm"
-                  aria-label="Primera página"
+                  aria-label={t("firstPage")}
                   disabled={currentPage <= 1}
                   onClick={() => setPage(1)}
                 >
@@ -647,7 +718,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                 <button
                   type="button"
                   className="btn btn-sm"
-                  aria-label="Página anterior"
+                  aria-label={t("previousPage")}
                   disabled={currentPage <= 1}
                   onClick={() => setPage(currentPage - 1)}
                 >
@@ -656,7 +727,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                 <button
                   type="button"
                   className="btn btn-sm"
-                  aria-label="Página siguiente"
+                  aria-label={t("nextPage")}
                   disabled={currentPage * preferences.pageSize >= data.totalCount}
                   onClick={() => setPage(currentPage + 1)}
                 >
@@ -665,7 +736,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
                 <button
                   type="button"
                   className="btn btn-sm"
-                  aria-label="Última página"
+                  aria-label={t("lastPage")}
                   disabled={currentPage * preferences.pageSize >= data.totalCount}
                   onClick={() =>
                     setPage(Math.max(1, Math.ceil(data.totalCount / preferences.pageSize)))

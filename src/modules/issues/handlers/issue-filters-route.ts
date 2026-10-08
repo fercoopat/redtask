@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { clearSession, getAuthenticatedSession } from "@/modules/auth/helpers/session";
 import { standardIssueFilters } from "@/modules/issues/helpers/issue-filter-options";
 import {
@@ -8,9 +10,10 @@ import { getAppConfig } from "@/shared/config";
 import { jsonResponse } from "@/shared/http";
 
 export async function GET() {
+  const t = await getTranslations();
   try {
     const session = await getAuthenticatedSession();
-    if (!session) return jsonResponse({ error: "Inicia sesión para ver los filtros." }, 401);
+    if (!session) return jsonResponse({ error: t("loginForFilters") }, 401);
     try {
       return jsonResponse({
         fields: await getRedmineIssueFilterOptions(session.apiKey),
@@ -32,16 +35,13 @@ export async function GET() {
         } catch {
           /* Deny this request even if stale session cleanup fails. */
         }
-        return jsonResponse(
-          { error: "La API Key dejó de tener acceso. Inicia sesión de nuevo." },
-          401,
-        );
+        return jsonResponse({ error: t("apiKeyRevoked") }, 401);
       }
       return jsonResponse(
-        { error: "No se pudieron cargar los filtros de Redmine." },
+        { error: t("filtersLoadError") },
         error.failure === "unavailable" ? 503 : 502,
       );
     }
-    return jsonResponse({ error: "No se pudieron cargar los filtros." }, 500);
+    return jsonResponse({ error: t("filtersGenericError") }, 500);
   }
 }

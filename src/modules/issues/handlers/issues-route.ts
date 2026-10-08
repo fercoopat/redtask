@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { clearSession, getAuthenticatedSession } from "@/modules/auth/helpers/session";
 import {
   standardIssueFilters,
@@ -12,8 +14,9 @@ import {
 import { jsonResponse } from "@/shared/http";
 
 export async function GET(request: Request) {
+  const t = await getTranslations();
   const query = parseIssueListQuery(new URL(request.url).searchParams);
-  if (!query) return jsonResponse({ error: "Los filtros o la paginación no son válidos." }, 400);
+  if (!query) return jsonResponse({ error: t("invalidIssuesQuery") }, 400);
   try {
     const session = await getAuthenticatedSession();
     if (!session) {
@@ -22,7 +25,7 @@ export async function GET(request: Request) {
       } catch {
         // The response still denies access when a stale cookie cannot be cleared.
       }
-      return jsonResponse({ error: "Inicia sesión para ver tus incidencias." }, 401);
+      return jsonResponse({ error: t("loginForIssues") }, 401);
     }
 
     let filterOptions = standardIssueFilters;
@@ -31,18 +34,12 @@ export async function GET(request: Request) {
         filterOptions = await getRedmineIssueFilterOptions(session.apiKey);
       } catch (error) {
         if (error instanceof RedmineRequestError && error.failure === "forbidden")
-          return jsonResponse(
-            { error: "Los campos personalizados no están disponibles para tu cuenta." },
-            400,
-          );
+          return jsonResponse({ error: t("customFieldsUnavailable") }, 400);
         throw error;
       }
     }
     if (!validateIssueFilters(query.filters, filterOptions))
-      return jsonResponse(
-        { error: "Uno o más filtros no son válidos o ya no están disponibles." },
-        400,
-      );
+      return jsonResponse({ error: t("invalidIssuesFilters") }, 400);
     const page = await getRedmineIssues(session.apiKey, query);
     return jsonResponse(page);
   } catch (error) {
@@ -54,22 +51,16 @@ export async function GET(request: Request) {
           } catch {
             // The 401 response still prevents this request from showing protected data.
           }
-          return jsonResponse(
-            { error: "La API Key dejó de tener acceso. Inicia sesión de nuevo." },
-            401,
-          );
+          return jsonResponse({ error: t("apiKeyRevoked") }, 401);
         case "forbidden":
-          return jsonResponse({ error: "Redmine no permite ver estas incidencias." }, 403);
+          return jsonResponse({ error: t("redmineIssuesForbidden") }, 403);
         case "unavailable":
-          return jsonResponse(
-            { error: "No se pudo conectar con Redmine. Inténtalo de nuevo." },
-            503,
-          );
+          return jsonResponse({ error: t("redmineUnavailable") }, 503);
         case "unexpected":
-          return jsonResponse({ error: "Redmine devolvió una respuesta inesperada." }, 502);
+          return jsonResponse({ error: t("unexpectedRedmine") }, 502);
       }
     }
 
-    return jsonResponse({ error: "No se pudieron cargar las incidencias." }, 500);
+    return jsonResponse({ error: t("issuesLoadError") }, 500);
   }
 }
