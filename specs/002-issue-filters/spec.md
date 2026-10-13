@@ -73,8 +73,8 @@ As a Redmine user, I want to move through issue results in pages and choose how 
 
 ### Functional Requirements
 
-- **FR-001**: The issue list MUST allow users to filter accessible issues by the greatest set of fields and criteria supported by the connected Redmine instance and the user's permissions.
-- **FR-002**: The available filter fields MUST include standard issue fields implemented by the application and issue custom fields that are filterable and whose metadata is available to the signed-in account.
+- **FR-001**: The issue list MUST allow users to filter accessible issues by the standard fields and criteria implemented by the application and accepted by the connected Redmine instance under the user's permissions.
+- **FR-002**: The available filter fields MUST include standard issue fields implemented by the application. This version MUST NOT discover custom-field filters through administrator-only endpoints; custom-filter discovery for ordinary users is deferred.
 - **FR-003**: For each field, the interface MUST offer only comparison operators implemented by the application for that field; it MUST show Redmine-provided selectable values when available and otherwise allow the user to enter a value, including empty/not-empty choices where supported. If Redmine rejects a filter, the interface MUST show a recoverable error and retain the criteria.
 - **FR-004**: Users MUST be able to add, configure, combine, edit, and remove multiple criteria in one issue-list query.
 - **FR-005**: When multiple criteria are active, the results MUST satisfy all active criteria; this feature does not require user-defined OR groups.
@@ -104,7 +104,7 @@ As a Redmine user, I want to move through issue results in pages and choose how 
 ### Measurable Outcomes
 
 - **SC-001**: Users can narrow the issue list using at least three simultaneous criteria and verify that all displayed issues meet each criterion.
-- **SC-002**: Users can reach every standard issue filter implemented by the application and every filterable custom field whose metadata is accessible to their account, without being limited to a fixed shortlist of controls.
+- **SC-002**: Users can reach every standard issue filter implemented by the application without being limited to a fixed shortlist of controls.
 - **SC-003**: At least 90% of users in a usability review can apply, edit, and clear a multi-criterion filter without assistance.
 - **SC-004**: Users can save and reapply a named personal filter in under one minute.
 - **SC-005**: In acceptance checks, no issue or filter field outside the signed-in user's Redmine permissions is exposed.
@@ -113,8 +113,12 @@ As a Redmine user, I want to move through issue results in pages and choose how 
 
 ## Assumptions
 
-- The application defines its standard issue filter fields and operators; Redmine remains the source of truth for whether a requested filter is accepted, for available values, and for access permissions. Custom fields are offered only when they are filterable and their metadata is available to the signed-in account.
+- The application defines its standard issue filter fields and operators; Redmine remains the source of truth for whether a requested filter is accepted, for available values, and for access permissions. This version offers standard filters only and does not call `/custom_fields.json`. Project custom-field descriptors remain available for issue creation and do not establish filterability.
 - “Personalizable filters” means users can choose their default visible filter controls and save named personal combinations of criteria.
 - Multiple criteria are combined with AND semantics; configurable OR groups are outside this feature's initial scope.
 - Saved filter sets and display preferences are personal to the signed-in Redmine user.
 - Existing issue-list behavior, authentication, and Redmine permissions continue to apply.
+
+## Ordinary-user scope update (2026-10-13)
+
+Saved custom criteria (`cf_*`) remain available for review and correction, but cannot be applied in this version. The API rejects them with 400 `custom_fields_unavailable` without fetching issues. No criterion may be silently discarded. The standard catalog validates the current API Key so revocation still ends the session. Administrator login is not blocked; application behavior does not depend on administrative privileges.

@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { LoginForm } from "@/modules/auth/components/login-form";
 import { getCurrentUser } from "@/modules/auth/helpers/session";
 import { LocaleSwitcher } from "@/shared/i18n/locale-switcher";
+import { Card, CardBody } from "@/shared/ui/card";
 
 export default async function LoginPage() {
   if (await getCurrentUser()) redirect("/issues");
@@ -37,8 +38,8 @@ export default async function LoginPage() {
           </div>
         </section>
 
-        <section className="card w-full border border-base-300 bg-base-100 shadow-xl">
-          <div className="card-body gap-6 p-7 sm:p-9">
+        <Card className="w-full border border-base-300 bg-base-100 shadow-xl">
+          <CardBody className="gap-6 p-7 sm:p-9">
             <div className="space-y-2">
               <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
                 {t("welcome")}
@@ -49,8 +50,8 @@ export default async function LoginPage() {
             <LoginForm />
             <div className="divider my-0" />
             <p className="text-xs leading-relaxed text-base-content/55">{t("apiKeyStorage")}</p>
-          </div>
-        </section>
+          </CardBody>
+        </Card>
       </div>
     </main>
   );

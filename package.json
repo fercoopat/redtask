@@ -7,15 +7,24 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "format": "prettier --write src specs .specify/memory/constitution.md README.md package.json eslint.config.mjs next.config.ts tsconfig.json .prettierrc.json",
-    "format:check": "prettier --check src specs .specify/memory/constitution.md README.md package.json eslint.config.mjs next.config.ts tsconfig.json .prettierrc.json"
+    "format": "prettier --write src specs docs tests playwright.config.ts playwright.redmine.config.ts compose.redmine-test.yml scripts/redmine-test/app.mjs .specify/memory/constitution.md README.md package.json eslint.config.mjs next.config.ts tsconfig.json .prettierrc.json",
+    "format:check": "prettier --check src specs docs tests playwright.config.ts playwright.redmine.config.ts compose.redmine-test.yml scripts/redmine-test/app.mjs .specify/memory/constitution.md README.md package.json eslint.config.mjs next.config.ts tsconfig.json .prettierrc.json",
+    "test": "pnpm test:unit",
+    "test:unit": "node --import tsx --test --experimental-test-isolation=none --test-reporter=spec tests/unit/*.test.ts",
+    "test:e2e": "playwright test",
+    "test:all": "pnpm test:unit && pnpm test:e2e",
+    "redmine:test:up": "docker compose -f compose.redmine-test.yml up -d --wait && pnpm redmine:test:seed",
+    "redmine:test:seed": "docker compose -f compose.redmine-test.yml exec -T --user redmine redmine bundle exec rails runner /opt/redmine-test/seed.rb",
+    "redmine:test:down": "docker compose -f compose.redmine-test.yml down",
+    "redmine:test:app": "node scripts/redmine-test/app.mjs",
+    "test:e2e:redmine": "pnpm redmine:test:up && playwright test --config playwright.redmine.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.1",
-    "iron-session": "^9.0.1",
+    "iron-session": "9.0.1",
     "lucide-react": "1.52.0",
     "next": "16.3.8",
-    "next-intl": "^4.14.9",
+    "next-intl": "4.14.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "7.89.0",
@@ -23,6 +32,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4",
     "@types/node": "20",
     "@types/react": "19",
@@ -31,10 +41,11 @@
     "daisyui": "5.7.47",
     "eslint": "9",
     "eslint-config-next": "16.3.8",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-simple-import-sort": "^14.0.0",
-    "prettier": "^3.9.9",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-simple-import-sort": "14.0.0",
+    "prettier": "3.9.9",
     "tailwindcss": "4",
+    "tsx": "4.23.15",
     "typescript": "5"
   },
   "packageManager": "pnpm@12.8.1"

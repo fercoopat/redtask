@@ -1,13 +1,7 @@
-import { z } from "zod";
+import { pageSchema, pageSizeSchema } from "@/modules/issues/schemas/issue-list-query";
+export { issuePageSizes } from "@/modules/issues/schemas/issue-list-query";
 
 import type { IssueFilterCriterion } from "./issue-filter-options";
-
-export const issuePageSizes = [10, 25, 50, 100] as const;
-const pageSchema = z.coerce.number().int().min(1).max(1_000_000);
-const pageSizeSchema = z.coerce
-  .number()
-  .int()
-  .refine((value) => issuePageSizes.includes(value as (typeof issuePageSizes)[number]));
 
 export function parseIssueListQuery(params: URLSearchParams) {
   if (params.getAll("page").length > 1 || params.getAll("pageSize").length > 1) return null;

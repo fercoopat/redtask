@@ -19,6 +19,11 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".next-e2e/**",
+    ".next-redmine-test/**",
+    "playwright-report/**",
+    "test-results/**",
+    "test-results-redmine/**",
     "out/**",
     "node_modules/**",
     "dist/**",

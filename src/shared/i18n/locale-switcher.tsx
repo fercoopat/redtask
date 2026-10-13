@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { Alert } from "@/shared/ui/alert";
+import { Button } from "@/shared/ui/button";
+import { Select } from "@/shared/ui/select";
+
 import { isLocale, type Locale, locales } from "./locale";
 
 export function LocaleSwitcher() {
@@ -35,9 +39,9 @@ export function LocaleSwitcher() {
       <label htmlFor="locale" className="sr-only">
         {t("language")}
       </label>
-      <select
+      <Select
         id="locale"
-        className="select select-bordered select-sm"
+        className="select-sm"
         value={locale}
         disabled={status === "pending"}
         onChange={(event) => {
@@ -49,22 +53,18 @@ export function LocaleSwitcher() {
             {item === "es" ? "Español" : "English"}
           </option>
         ))}
-      </select>
+      </Select>
       {status === "pending" && <p role="status">{t("languageSaving")}</p>}
       {status === "success" && <p role="status">{t("languageSaved")}</p>}
       {status === "error" && (
-        <p role="alert" className="flex items-center gap-2 text-sm text-error">
+        <Alert variant="error" className="flex items-center gap-2 text-sm">
           {t("languageSaveError")}
           {retryLocale && (
-            <button
-              type="button"
-              className="btn btn-xs"
-              onClick={() => void saveLocale(retryLocale)}
-            >
+            <Button type="button" size="xs" onClick={() => void saveLocale(retryLocale)}>
               {t("retry")}
-            </button>
+            </Button>
           )}
-        </p>
+        </Alert>
       )}
     </div>
   );

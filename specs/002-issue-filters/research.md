@@ -4,7 +4,7 @@
 
 **Decision**: Extend the existing issue-list flow rather than add a parallel search service.
 
-**Rationale**: `IssueList` currently requests `/api/issues`; `issues-route.GET` authenticates the user and calls `getRedmineIssues`; the Redmine helper already parses `total_count`, `offset`, and `limit`. It currently hard-codes `limit=25`. The data path can support filtering and pagination by carrying validated request criteria through this flow.
+**Rationale**: `IssueList` currently requests `/api/issues`; `issues-route.GET` authenticates the user and calls `getRedmineIssues`; the Redmine helper already parses `total_count`, `offset`, and `limit`. At the initial research date it hard-coded `limit=25`; the implementation now supports bounded page sizes with default 10. The data path can support filtering and pagination by carrying validated request criteria through this flow.
 
 **Alternatives considered**: Fetching all issues and filtering in the browser would bypass Redmine's own query and pagination behavior, add unnecessary data transfer, and risk incomplete or inconsistent results.
 
@@ -18,9 +18,9 @@
 
 ## Filter metadata and custom fields
 
-**Decision**: Define an explicit application catalog of standard issue fields and operators. Offer custom fields only when they are filterable and their metadata is available to the signed-in account. Since Redmine does not expose a general filter-discovery endpoint, confirm compatibility when a filter is applied and surface instance rejections as recoverable errors without dropping criteria.
+**Decision**: Define an explicit application catalog of standard issue fields and operators. Offer standard filters only in this version; defer custom-filter discovery for ordinary users. Never call `/custom_fields.json` from application workflows. Preserve saved custom criteria for review and reject their application without fetching issues. Since Redmine does not expose a general filter-discovery endpoint, confirm compatibility when a filter is applied and surface instance rejections as recoverable errors without dropping criteria.
 
-**Rationale**: The official [Redmine REST Issues documentation](https://www.redmine.org/projects/redmine/wiki/Rest_Issues) describes common filter parameters but does not provide a general filter-discovery endpoint. Redmine versions and plugins may differ. The [Redmine custom-field REST documentation](https://www.redmine.org/projects/redmine/wiki/Rest_CustomFields) says `GET /custom_fields` returns definitions, including `is_filter` and possible values, but requires administrator privileges. Issue filtering by custom field requires the field to be configured as a filter. A normal user cannot be assumed to have permission to enumerate all definitions.
+**Rationale**: The official [Redmine REST Issues documentation](https://www.redmine.org/projects/redmine/wiki/Rest_Issues) describes common filter parameters but does not provide a general filter-discovery endpoint. Redmine versions and plugins may differ. The [Redmine custom-field REST documentation](https://www.redmine.org/projects/redmine/wiki/Rest_CustomFields) says `GET /custom_fields` returns definitions, including `is_filter` and possible values, but requires administrator privileges. Issue filtering by custom field requires the field to be configured as a filter. A normal user cannot be assumed to have permission to enumerate all definitions. The project-scoped descriptors used for creation contain ID and name and do not establish filterability or format. Thus they cannot replace filter-definition metadata.
 
 **Alternatives considered**: Calling the admin-only endpoint unconditionally would fail for ordinary users. Inferring filterability from issue payload fields can omit fields absent from returned issues and does not establish whether Redmine accepts them as filters.
 

@@ -1,1 +1,1 @@
-export { GET } from "@/modules/issues/handlers/issues-route";
+export { GET, POST } from "@/modules/issues/handlers/issues-route";

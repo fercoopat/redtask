@@ -6,14 +6,14 @@
 
 Requires the existing authenticated Redmine session. Query inputs select a page and optional filter criteria.
 
-| Parameter                   | Meaning                                                                                          | Default / validation                                                                                                                                                     |
-| --------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `page`                      | One-based result page                                                                            | `1`; positive integer.                                                                                                                                                   |
-| `pageSize`                  | Issues per page                                                                                  | `10`; one of `10`, `25`, `50`, `100`.                                                                                                                                    |
-| `filter[<field>][operator]` | Operator for a standard field in the application catalog or an available filterable custom field | Required for each criterion; must be advertised for that field.                                                                                                          |
-| `filter[<field>][value]`    | One or more values for that criterion                                                            | Required unless the chosen operator takes no value; validate against the field type. Use Redmine-provided choices when available, otherwise accept a user-entered value. |
+| Parameter                   | Meaning                                                  | Default / validation                                                                                                                                                     |
+| --------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `page`                      | One-based result page                                    | `1`; positive integer.                                                                                                                                                   |
+| `pageSize`                  | Issues per page                                          | `10`; one of `10`, `25`, `50`, `100`.                                                                                                                                    |
+| `filter[<field>][operator]` | Operator for a standard field in the application catalog | Required for each criterion; must be advertised for that field.                                                                                                          |
+| `filter[<field>][value]`    | One or more values for that criterion                    | Required unless the chosen operator takes no value; validate against the field type. Use Redmine-provided choices when available, otherwise accept a user-entered value. |
 
-Application-level validation converts `page` and `pageSize` to Redmine `offset` and `limit`. Standard filter fields and operators are allowlisted according to the application's supported catalog. Custom fields are offered only when they are filterable and metadata is available to the signed-in account. Input is safely encoded when constructing the upstream request. Criteria are combined with AND semantics. Since Redmine does not expose a general filter-discovery endpoint, an instance may reject a filter from the application catalog; that rejection is surfaced as a recoverable upstream error and the application never retries without that criterion.
+Application-level validation converts `page` and `pageSize` to Redmine `offset` and `limit`. Standard filter fields and operators are allowlisted according to the application's supported catalog. This version offers standard filters only. Any `cf_*` criterion receives 400 `custom_fields_unavailable` before an upstream issue query. Saved custom criteria remain available for review and correction. Input is safely encoded when constructing the upstream request. Criteria are combined with AND semantics. Since Redmine does not expose a general filter-discovery endpoint, an instance may reject a filter from the application catalog; that rejection is surfaced as a recoverable upstream error and the application never retries without that criterion.
 
 ### Success response
 
@@ -54,3 +54,7 @@ Preferences are browser-local and are not synchronized to other devices or writt
 4. Applying changed filters or page size starts on page 1; an out-of-range page resolves to a valid page.
 5. Unsupported field/operator/value combinations fail without falling back to unfiltered issues.
 6. Preferences for one signed-in user are not loaded under another user's storage key; no credential is present in the stored preference object.
+
+## Standard filter catalog
+
+`GET /api/issues/filters` requires the existing session, verifies the API Key via `/users/current.json`, and returns `{ fields, instance }`, where `fields` is the shared standard catalog and `instance` identifies the configured Redmine instance for preference scoping. It never queries `/custom_fields.json`. Missing or revoked credentials return 401 and revoked credentials clear the session; other upstream failures retain the uniform error envelope. Project-scoped custom fields used for issue creation are independent of this catalog.

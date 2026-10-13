@@ -1,38 +1,22 @@
-import { z } from "zod";
-
 import type { RedmineUser } from "@/modules/auth/helpers/session";
+import { type IssueFilterCriterion } from "@/modules/issues/helpers/issue-filter-options";
 import {
-  type IssueFilterCriterion,
-  type IssueFilterOption,
-  standardIssueFilters,
-} from "@/modules/issues/helpers/issue-filter-options";
+  createdIssueSchema,
+  issueCreateOptionsSchema,
+  type IssueDraft,
+  issueDraftSchema,
+  type ProjectChoice,
+  redmineValidationMessagesSchema,
+} from "@/modules/issues/schemas/issue-creation";
+import {
+  prioritiesResponseSchema,
+  projectCreateResponseSchema,
+  projectsResponseSchema,
+} from "@/modules/redmine/schemas/create-options-response";
+import { createdIssueResponseSchema } from "@/modules/redmine/schemas/created-issue-response";
+import { currentUserResponseSchema } from "@/modules/redmine/schemas/current-user-response";
+import { issueListResponseSchema } from "@/modules/redmine/schemas/issue-list-response";
 import { getAppConfig } from "@/shared/config";
-
-const currentUserResponseSchema = z.object({
-  user: z.object({
-    id: z.number().int().positive(),
-    login: z.string().min(1),
-  }),
-});
-
-const namedValueSchema = z.object({ name: z.string() });
-
-const issueResponseSchema = z.object({
-  id: z.number().int().positive(),
-  subject: z.string(),
-  project: namedValueSchema.optional(),
-  status: namedValueSchema.optional(),
-  priority: namedValueSchema.optional(),
-  assigned_to: namedValueSchema.nullable().optional(),
-  updated_on: z.string().optional(),
-});
-
-const issueListResponseSchema = z.object({
-  issues: z.array(issueResponseSchema),
-  total_count: z.number().int().nonnegative(),
-  offset: z.number().int().nonnegative(),
-  limit: z.number().int().positive(),
-});
 
 export type RedmineIssueSummary = {
   id: number;
@@ -51,26 +35,38 @@ export type RedmineIssuePage = {
   limit: number;
 };
 
-export type RedmineFailure = "unauthorized" | "forbidden" | "unavailable" | "unexpected";
+export type RedmineFailure =
+  "unauthorized" | "forbidden" | "unavailable" | "validation" | "unexpected";
 
 export class RedmineRequestError extends Error {
-  constructor(readonly failure: RedmineFailure) {
+  constructor(
+    readonly failure: RedmineFailure,
+    readonly messages: string[] = [],
+    readonly status?: number,
+  ) {
     super(failure);
     this.name = "RedmineRequestError";
   }
 }
 
-async function requestRedmine(path: string, apiKey: string): Promise<unknown> {
+export async function requestRedmineResponse(
+  path: string,
+  apiKey: string,
+  body?: unknown,
+): Promise<Response> {
   const { redmineBaseUrl } = getAppConfig();
   const url = new URL(path.replace(/^\/+/, ""), `${redmineBaseUrl}/`);
 
   let response: Response;
   try {
     response = await fetch(url, {
+      method: body === undefined ? "GET" : "POST",
       headers: {
         Accept: "application/json",
         "X-Redmine-API-Key": apiKey,
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       cache: "no-store",
       redirect: "error",
       signal: AbortSignal.timeout(10_000),
@@ -79,10 +75,29 @@ async function requestRedmine(path: string, apiKey: string): Promise<unknown> {
     throw new RedmineRequestError("unavailable");
   }
 
+  return response;
+}
+
+async function requestRedmine(path: string, apiKey: string, body?: unknown): Promise<unknown> {
+  const response = await requestRedmineResponse(path, apiKey, body);
   if (!response.ok) {
-    if (response.status === 401) throw new RedmineRequestError("unauthorized");
-    if (response.status === 403) throw new RedmineRequestError("forbidden");
-    throw new RedmineRequestError("unexpected");
+    if (response.status === 401) throw new RedmineRequestError("unauthorized", [], response.status);
+    if (response.status === 403) throw new RedmineRequestError("forbidden", [], response.status);
+    if (response.status === 422) {
+      const parsed = redmineValidationMessagesSchema.safeParse(
+        await response.json().catch(() => null),
+      );
+      throw new RedmineRequestError(
+        "validation",
+        parsed.success
+          ? parsed.data.errors
+              .slice(0, 10)
+              .map((message) => message.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 300))
+          : [],
+      );
+    }
+    if (response.status >= 500) throw new RedmineRequestError("unavailable", [], response.status);
+    throw new RedmineRequestError("unexpected", [], response.status);
   }
 
   try {
@@ -92,76 +107,97 @@ async function requestRedmine(path: string, apiKey: string): Promise<unknown> {
   }
 }
 
+export async function getRedmineProjects(apiKey: string): Promise<ProjectChoice[]> {
+  // ponytail: the selector shows the first 100 projects; paginate if the instance exceeds that.
+  const parsed = projectsResponseSchema.safeParse(
+    await requestRedmine("projects.json?limit=100", apiKey),
+  );
+  if (!parsed.success) throw new RedmineRequestError("unexpected");
+  return parsed.data.projects;
+}
+
+export async function getRedmineIssueCreateOptions(apiKey: string, projectId: number) {
+  const project = projectCreateResponseSchema.safeParse(
+    await requestRedmine(
+      `projects/${projectId}.json?include=trackers,issue_categories,issue_custom_fields`,
+      apiKey,
+    ),
+  );
+  if (!project.success || project.data.project.id !== projectId)
+    throw new RedmineRequestError("unexpected");
+
+  let priorities: ProjectChoice[] = [];
+  try {
+    const parsed = prioritiesResponseSchema.safeParse(
+      await requestRedmine("enumerations/issue_priorities.json", apiKey),
+    );
+    if (!parsed.success) throw new RedmineRequestError("unexpected");
+    priorities = parsed.data.issue_priorities;
+  } catch (error) {
+    if (!(error instanceof RedmineRequestError) || ![404, 501].includes(error.status ?? 0))
+      throw error;
+  }
+  const result = issueCreateOptionsSchema.safeParse({
+    projectId,
+    trackers: project.data.project.trackers,
+    categories: project.data.project.issue_categories,
+    priorities,
+    customFields: project.data.project.issue_custom_fields.map((field) => ({
+      id: field.id,
+      name: field.name,
+      fieldFormat: field.field_format,
+      required: field.is_required,
+      ...(field.possible_values
+        ? {
+            possibleValues: field.possible_values.map((value) =>
+              typeof value === "string" ? { value, label: value } : value,
+            ),
+          }
+        : {}),
+    })),
+  });
+  if (!result.success) throw new RedmineRequestError("unexpected");
+  return result.data;
+}
+
+export async function createRedmineIssue(apiKey: string, draft: IssueDraft) {
+  const validated = issueDraftSchema.safeParse(draft);
+  if (!validated.success) throw new RedmineRequestError("unexpected");
+  const result = createdIssueResponseSchema.safeParse(
+    await requestRedmine("issues.json", apiKey, {
+      issue: {
+        project_id: validated.data.projectId,
+        ...(validated.data.trackerId ? { tracker_id: validated.data.trackerId } : {}),
+        subject: validated.data.subject,
+        ...(validated.data.description ? { description: validated.data.description } : {}),
+        ...(validated.data.priorityId ? { priority_id: validated.data.priorityId } : {}),
+        ...(validated.data.categoryId ? { category_id: validated.data.categoryId } : {}),
+        ...(validated.data.customFields.length
+          ? {
+              custom_fields: validated.data.customFields.map((field) => ({
+                id: field.id,
+                value: field.value,
+              })),
+            }
+          : {}),
+      },
+    }),
+  );
+  if (!result.success) throw new RedmineRequestError("unexpected");
+  const { redmineBaseUrl } = getAppConfig();
+  return createdIssueSchema.parse({
+    id: result.data.issue.id,
+    subject: result.data.issue.subject,
+    url: new URL(`issues/${result.data.issue.id}`, `${redmineBaseUrl}/`).toString(),
+  });
+}
+
 export async function getRedmineCurrentUser(apiKey: string): Promise<RedmineUser> {
   const result = currentUserResponseSchema.safeParse(
     await requestRedmine("users/current.json", apiKey),
   );
   if (!result.success) throw new RedmineRequestError("unexpected");
   return result.data.user;
-}
-
-export async function getRedmineIssueFilterOptions(apiKey: string): Promise<IssueFilterOption[]> {
-  const parsed = z
-    .object({
-      custom_fields: z.array(
-        z.object({
-          id: z.number().int().positive(),
-          name: z.string(),
-          customized_type: z.string(),
-          field_format: z.string(),
-          is_filter: z.boolean().optional(),
-          possible_values: z
-            .array(z.union([z.string(), z.object({ value: z.string(), label: z.string() })]))
-            .optional(),
-        }),
-      ),
-    })
-    .safeParse(await requestRedmine("custom_fields.json", apiKey));
-  if (!parsed.success) throw new RedmineRequestError("unexpected");
-  const customs: IssueFilterOption[] = parsed.data.custom_fields
-    .filter((field) => field.customized_type === "issue" && field.is_filter)
-    .map((field) => ({
-      field: `cf_${field.id}`,
-      label: field.name,
-      type:
-        field.field_format === "date"
-          ? "date"
-          : ["int", "float"].includes(field.field_format)
-            ? "number"
-            : field.possible_values?.length
-              ? "list"
-              : "text",
-      operators:
-        field.field_format === "date"
-          ? [
-              { value: "=", label: "es", requiresValue: true },
-              { value: ">=", label: "desde", requiresValue: true },
-              { value: "<=", label: "hasta", requiresValue: true },
-            ]
-          : field.possible_values?.length
-            ? [
-                { value: "=", label: "es", requiresValue: true },
-                { value: "!", label: "no es", requiresValue: true },
-              ]
-            : field.field_format === "int" || field.field_format === "float"
-              ? [
-                  { value: "=", label: "es", requiresValue: true },
-                  { value: ">", label: "mayor que", requiresValue: true },
-                  { value: "<", label: "menor que", requiresValue: true },
-                ]
-              : [
-                  { value: "~", label: "contiene", requiresValue: true },
-                  { value: "!~", label: "no contiene", requiresValue: true },
-                ],
-      ...(field.possible_values?.length
-        ? {
-            values: field.possible_values.map((v) =>
-              typeof v === "string" ? { value: v, label: v } : v,
-            ),
-          }
-        : {}),
-    }));
-  return [...standardIssueFilters, ...customs];
 }
 
 export async function getRedmineIssues(

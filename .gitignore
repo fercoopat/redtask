@@ -41,3 +41,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Browser test artifacts
+/.next-e2e/
+/playwright-report/
+/test-results/
+
+/.next-redmine-test/
+
+/test-results-redmine/

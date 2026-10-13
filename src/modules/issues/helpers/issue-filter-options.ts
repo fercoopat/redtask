@@ -1,9 +1,12 @@
+import { createIssueFiltersSchema } from "@/modules/issues/schemas/issue-filters";
+
 export type IssueFilterType = "list" | "text" | "date" | "number" | "boolean";
 export type IssueFilterOperator = { value: string; label: string; requiresValue: boolean };
 export type IssueFilterOption = {
   field: string;
   label: string;
   type: IssueFilterType;
+  numericKind?: "integer" | "float";
   operators: IssueFilterOperator[];
   values?: { value: string; label: string }[];
 };
@@ -23,8 +26,8 @@ const dateOps = [
 ];
 const numberOps = [
   eq,
-  { value: ">", label: "mayor que", requiresValue: true },
-  { value: "<", label: "menor que", requiresValue: true },
+  { value: ">=", label: "mayor o igual", requiresValue: true },
+  { value: "<=", label: "menor o igual", requiresValue: true },
 ];
 const emptyOps = [
   { value: "!*", label: "vacío", requiresValue: false },
@@ -59,8 +62,20 @@ export const standardIssueFilters: IssueFilterOption[] = [
   { field: "closed_on", label: "Cerrada", type: "date", operators: dateOps },
   { field: "start_date", label: "Fecha de inicio", type: "date", operators: dateOps },
   { field: "due_date", label: "Fecha límite", type: "date", operators: dateOps },
-  { field: "done_ratio", label: "Progreso (%)", type: "number", operators: numberOps },
-  { field: "estimated_hours", label: "Horas estimadas", type: "number", operators: numberOps },
+  {
+    field: "done_ratio",
+    label: "Progreso (%)",
+    type: "number",
+    numericKind: "integer",
+    operators: numberOps,
+  },
+  {
+    field: "estimated_hours",
+    label: "Horas estimadas",
+    type: "number",
+    numericKind: "float",
+    operators: numberOps,
+  },
   {
     field: "is_private",
     label: "Privada",
@@ -77,35 +92,5 @@ export function validateIssueFilters(
   filters: IssueFilterCriterion[],
   options: IssueFilterOption[],
 ) {
-  if (filters.length > 20) return false;
-  return filters.every((filter) => {
-    const field = options.find((option) => option.field === filter.field);
-    const operator = field?.operators.find((item) => item.value === filter.operator);
-    if (!field || !operator || operator.requiresValue !== Boolean(filter.value)) return false;
-    const value = filter.value ?? "";
-    if (
-      value.length > 200 ||
-      (field.values && operator.requiresValue && !field.values.some((item) => item.value === value))
-    )
-      return false;
-    if (
-      field.type === "list" &&
-      !field.values &&
-      operator.requiresValue &&
-      !/^[1-9]\d*$/.test(value)
-    )
-      return false;
-    if (field.type === "number" && operator.requiresValue) {
-      const number = Number(value);
-      if (!Number.isFinite(number)) return false;
-      if (field.field === "done_ratio" && (number < 0 || number > 100)) return false;
-      if (field.field === "estimated_hours" && number < 0) return false;
-    }
-    if (field.type === "date" && operator.requiresValue) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-      const date = new Date(`${value}T00:00:00.000Z`);
-      if (Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== value) return false;
-    }
-    return true;
-  });
+  return createIssueFiltersSchema(options).safeParse(filters).success;
 }

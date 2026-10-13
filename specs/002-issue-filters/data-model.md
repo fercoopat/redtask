@@ -6,11 +6,11 @@ Issue records remain owned by Redmine. This feature adds only transient query st
 
 Represents one issue constraint in an active or saved filter.
 
-| Field      | Meaning                                                              | Validation                                                       |
-| ---------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `field`    | Supported Redmine issue filter identifier                            | Must be in the server-side allowlist for the connected instance. |
-| `operator` | Comparison supported for that field                                  | Must be one of the operators advertised for the field.           |
-| `value`    | One or more selected values, or absent for empty/not-empty operators | Type and cardinality must match the field and operator.          |
+| Field      | Meaning                                                              | Validation                                                      |
+| ---------- | -------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `field`    | Supported Redmine issue filter identifier                            | Must be in the shared standard catalog validated by the server. |
+| `operator` | Comparison supported for that field                                  | Must be one of the operators advertised for the field.          |
+| `value`    | One or more selected values, or absent for empty/not-empty operators | Type and cardinality must match the field and operator.         |
 
 Multiple criteria are ANDed. User-defined OR groups are out of scope.
 
@@ -24,7 +24,7 @@ Named personal collection of criteria stored in the current browser profile.
 | `name`     | User-visible filter name                            | Required, trimmed, non-empty.                         |
 | `criteria` | Filter Criterion collection                         | Every criterion must still be supported when applied. |
 
-If a saved criterion is no longer supported, identify it and allow the user to remove or edit it; do not silently omit it and broaden the result set.
+If a saved criterion is no longer supported, identify it and allow the user to remove or edit it; do not silently omit it and broaden the result set. Saved `cf_*` criteria are preserved for review but are unavailable for application in this version.
 
 ## Filter Preference
 

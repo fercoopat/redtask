@@ -8,7 +8,7 @@ description: "Actionable task list for issue filtering, personal filters, and pa
 
 **Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/issues-list.md](contracts/issues-list.md), [quickstart.md](quickstart.md)
 
-**Tests**: No test tasks included; the feature specification does not request tests or a TDD approach. Each story includes independent acceptance criteria for implementation review.
+**Tests**: Initial tasks used independent acceptance criteria. The ordinary-user scope update includes authorized automated regressions; see T020 and [the testing guide](../../docs/testing.md).
 
 **Organization**: Tasks are grouped by user story. Pagination can be delivered against the existing unfiltered issue list; filter personalization builds on the filtering story.
 
@@ -39,7 +39,7 @@ No setup tasks are needed. The authenticated issue list, same-origin endpoint, R
 
 ### Implementation for User Story 1
 
-- [x] T003 [P] [US1] Define the standard issue filter fields and operators implemented by the application, plus their field types and Redmine-provided values, in `src/modules/issues/helpers/issue-filter-options.ts`; include custom fields only when they are filterable and their metadata is available to the signed-in account, and allow typed values when no selectable values are provided.
+- [x] T003 [P] [US1] Define the standard issue filter fields and operators implemented by the application, plus their field types and Redmine-provided values, in `src/modules/issues/helpers/issue-filter-options.ts`; offer standard filters only in this version and allow typed values when no selectable values are provided.
 - [x] T004 [P] [US1] Extend the Redmine issue-list request builder to encode validated filter criteria and request the matching result total in `src/modules/redmine/helpers/redmine-api.ts`; preserve Redmine filter rejections as recoverable errors and never retry without the rejected criteria. Do not implement page/limit conversion in this task.
 - [x] T005 [US1] Validate each criterion's field and operator against the application's catalog and its value against the field type/cardinality in the authenticated issues handler; return 400 for invalid criteria before calling Redmine, then pass valid criteria to the issue-list helper in `src/modules/issues/handlers/issues-route.ts` (depends on T001-T004).
 - [x] T006 [US1] Add controls to select field/operator/value, combine criteria with AND semantics, edit/remove criteria, clear all filters, and show active criteria and empty results in `src/modules/issues/components/issue-list.tsx`; reset to page 1 when criteria change (depends on T003, T005).
@@ -91,6 +91,7 @@ No setup tasks are needed. The authenticated issue list, same-origin endpoint, R
 - [x] T017 [P] Ensure filter, saved-filter, and pagination controls have accessible labels, keyboard operation, visible focus, and appropriate loading/empty/error states in `src/modules/issues/components/issue-list.tsx`.
 - [x] T018 Review issue-list query validation and Redmine request construction for permission preservation, safe URL encoding, and absence of credentials in preference storage in `src/modules/issues/helpers/issue-list-query.ts`, `src/modules/issues/helpers/issue-list-preferences.ts`, and `src/modules/redmine/helpers/redmine-api.ts`.
 - [x] T019 Walk through the filter, personalization, pagination, permission, and failure scenarios in `specs/002-issue-filters/quickstart.md` and record any implementation gaps in `specs/002-issue-filters/quickstart.md`.
+- [x] T020 Adapt filters to ordinary users: remove administrator-only metadata calls, verify the current API Key in `src/modules/issues/handlers/issue-filters-route.ts`, reject `cf_*` before upstream requests in `src/modules/issues/handlers/issues-route.ts`, preserve saved criteria, and cover revocation and preservation in `tests/e2e/issues.spec.ts`; align this feature's specification and contracts.
 
 ---
 

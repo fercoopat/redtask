@@ -1,9 +1,4 @@
-import { z } from "zod";
-
-const environmentSchema = z.object({
-  REDMINE_BASE_URL: z.url(),
-  IRON_SESSION_PASSWORD: z.string().min(32),
-});
+import { environmentSchema } from "@/shared/schemas/environment";
 
 export function getAppConfig() {
   const result = environmentSchema.safeParse(process.env);

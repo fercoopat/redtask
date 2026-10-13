@@ -6,7 +6,7 @@
 
 ## Summary
 
-Let users filter issues with standard fields and operators implemented by the application, plus custom fields whose filterable metadata is available to their account. Users can save personal filter sets, choose visible filter controls, and paginate results with 10 issues per page by default. Extend the existing issues request and list flow; persist non-secret personal preferences in browser storage scoped to the Redmine user.
+Let users filter issues with standard fields and operators implemented by the application, without depending on administrator privileges. Custom-field filter discovery for ordinary accounts is deferred. Users can save personal filter sets, choose visible filter controls, and paginate results with 10 issues per page by default. Extend the existing issues request and list flow; persist non-secret personal preferences in browser storage scoped to the Redmine user.
 
 ## Technical Context
 
@@ -16,7 +16,7 @@ Let users filter issues with standard fields and operators implemented by the ap
 
 **Storage**: Browser local storage for page-size, visible-control, and saved-filter preferences; Redmine remains the source of issue data. Do not store API keys or session credentials in preference storage.
 
-**Testing**: Existing package scripts provide lint, format, and build checks; no dedicated test script is configured.
+**Testing**: Unit, simulated-browser and isolated real-Redmine checks are documented in [the testing guide](../../docs/testing.md), alongside lint, types, format and build.
 
 **Target Platform**: Authenticated web application in current desktop and mobile browsers
 
@@ -75,7 +75,7 @@ src/
 
 - Filtering and pagination are performed by Redmine for each request, so counts and page boundaries apply to the complete permission-filtered result set.
 - The issues endpoint accepts a validated page number, page size, and supported filter criteria. The Redmine helper converts these to Redmine's issue-list query parameters and maps its `total_count`, `offset`, and `limit` response.
-- The application provides an explicit catalog of standard issue fields and operators it implements; custom fields are included only when they are filterable and their metadata is available to the signed-in account. Use Redmine-provided values when available and otherwise accept a user-entered value. Because Redmine has no general filter-discovery endpoint, confirm instance compatibility when a filter is applied; if Redmine rejects it, preserve the criteria and show a recoverable error without retrying as an unfiltered request.
+- The application provides an explicit catalog of standard issue fields and operators it implements; this version offers standard filters only and verifies the current API Key when loading the catalog. It does not call `/custom_fields.json`. Use Redmine-provided values when available and otherwise accept a user-entered value. Because Redmine has no general filter-discovery endpoint, confirm instance compatibility when a filter is applied; if Redmine rejects it, preserve the criteria and show a recoverable error without retrying as an unfiltered request.
 - Page-size options are bounded choices (10, 25, 50, 100); default to 10. Keep pagination state in the request URL/state and persist only the selected page size as a user preference.
 - Store saved filters and visible-control preferences in local storage under a key scoped by Redmine base URL and user identity. These are browser-local preferences and do not sync between devices.
 - When filters or page size change, request page 1. If a response reveals the requested page is beyond the final page, request the final valid page once.
@@ -83,7 +83,7 @@ src/
 
 ## Risks and Open Constraints
 
-- Redmine's public REST API does not provide ordinary users a general endpoint for discovering every available issue filter. The custom-field definitions endpoint requires administrator privileges, so custom fields are limited to filterable fields whose metadata the signed-in account can access.
+- Redmine's public REST API does not provide ordinary users a general endpoint for discovering every available issue filter. The custom-field definitions endpoint requires administrator privileges, so this version defers custom filters rather than depending on it. Project descriptors used for creation do not establish filterability. Saved `cf_*` criteria remain reviewable and are rejected with 400 without an upstream issue request.
 - Redmine versions and plugins can differ in supported filters and operators. The application catalog defines what can be selected; an instance rejection must surface as a recoverable request error, and the client must not silently broaden results.
 - Browser-local saved filters are scoped per user and browser profile, but are not synchronized with Redmine or other devices.
 

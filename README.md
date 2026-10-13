@@ -1,6 +1,8 @@
 # Redmine Workspace
 
-Interfaz web para iniciar sesión con una API Key de Redmine y consultar las incidencias permitidas para esa cuenta.
+Interfaz web para iniciar sesión con una API Key de Redmine y consultar y crear incidencias con los permisos de esa cuenta. Los flujos están orientados a usuarios normales y no requieren credenciales administrativas.
+
+El listado ofrece filtros estándar; los campos personalizados del proyecto se mantienen en la creación. Los filtros personalizados guardados se conservan para revisión, pero no se pueden aplicar en esta versión.
 
 ## Requisitos
 
@@ -26,6 +28,16 @@ Abre <http://localhost:3000>.
 ## Validación
 
 Consulta la [guía de inicio y escenarios de aceptación](specs/001-redmine-api-key-auth/quickstart.md) para validar la conexión, la persistencia y el cierre de sesión.
+
+Las comprobaciones automáticas y su entorno aislado están descritos en [docs/testing.md](docs/testing.md). La creación se valida también con el [quickstart de incidencias](specs/004-add-issues/quickstart.md). El seguimiento de dependencias está en [docs/security.md](docs/security.md) y la relación de correcciones de la revisión, en [docs/project-review-remediation.md](docs/project-review-remediation.md).
+
+## Diagnóstico de lectura
+
+Después de iniciar sesión, abre **Diagnóstico** desde la lista de incidencias. Comprueba cinco lecturas con tu cuenta y descarga un informe saneado. Consulta [la guía de diagnóstico](docs/redmine-diagnostics.md).
+
+## Redmine local de pruebas
+
+Puedes validar la integración sin acceder al servidor desplegado mediante [Redmine local con Docker y SQLite](docs/redmine-local-testing.md). Usa `pnpm redmine:test:up`, `pnpm redmine:test:app` y `pnpm test:e2e:redmine`.
 
 ## Formato de código
 

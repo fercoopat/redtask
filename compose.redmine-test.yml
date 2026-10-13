@@ -1,0 +1,29 @@
+name: redmine-ui-test
+services:
+  redmine:
+    image: redmine:6.1.5
+    ports:
+      - "127.0.0.1:3030:3000"
+    environment:
+      REDMINE_LOCAL_TEST: "1"
+      SECRET_KEY_BASE: "local-redmine-test-only-secret-0123456789abcdef0123456789abcdef0123456789abcdef"
+    volumes:
+      - database:/usr/src/redmine/sqlite
+      - files:/usr/src/redmine/files
+      - ./scripts/redmine-test/seed.rb:/opt/redmine-test/seed.rb:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "ruby",
+          "-rnet/http",
+          "-e",
+          "exit(Net::HTTP.get_response(URI('http://localhost:3000/login')).code == '200' ? 0 : 1)",
+        ]
+      interval: 5s
+      timeout: 5s
+      start_period: 60s
+      retries: 36
+volumes:
+  database:
+  files:
