@@ -13,7 +13,7 @@ export default async function LoginPage() {
   return (
     <main className="hero min-h-screen bg-base-200 px-5 py-12">
       <div className="hero-content grid w-full max-w-6xl gap-12 lg:grid-cols-[1fr_440px] lg:gap-20">
-        <section className="space-y-7">
+        <section className="login-hero space-y-7">
           <div className="flex items-center gap-3">
             <div className="grid size-11 place-items-center rounded-xl bg-primary text-primary-content">
               <span className="text-lg font-bold" aria-hidden="true">
@@ -25,7 +25,7 @@ export default async function LoginPage() {
           <LocaleSwitcher />
           <div className="space-y-4">
             <p className="badge badge-primary badge-outline">{t("workspace")}</p>
-            <h1 className="max-w-xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+            <h1 className="font-charlie-display font-medium">
               {t("headline")}
             </h1>
             <p className="max-w-lg text-lg leading-relaxed text-base-content/65">
@@ -41,7 +41,7 @@ export default async function LoginPage() {
         <Card className="w-full">
           <CardBody className="gap-6 p-7 sm:p-9">
             <div className="space-y-2">
-              <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
+              <p className="text-sm font-medium text-primary">
                 {t("welcome")}
               </p>
               <h2 className="card-title text-2xl">{t("connectAccount")}</h2>

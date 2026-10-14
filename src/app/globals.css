@@ -13,7 +13,7 @@
   --color-taxicab-yellow: #fca700;
   --color-lavender-wash: #eed7fc;
   --font-charlie-text: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-charlie-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-charlie-display: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --text-caption: 13px;
   --leading-caption: 1.29;
   --text-body: 16px;
@@ -93,7 +93,7 @@ body {
   min-height: 100vh;
   background: #ffffff;
   color: #101214;
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-charlie-text);
   font-size: 16px;
   line-height: 1.5;
 }
@@ -150,4 +150,74 @@ h3 {
 .table thead {
   color: #42526e;
   font-size: 13px;
+}
+
+.login-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #101214;
+  padding: 2.5rem;
+  color: #ffffff;
+}
+
+.login-hero::before,
+.login-hero::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+}
+
+.login-hero::before {
+  top: 12%;
+  right: -2.5rem;
+  width: 7rem;
+  height: 14rem;
+  background: #bf63f3;
+  clip-path: polygon(34% 0, 100% 12%, 67% 100%, 0 78%);
+  transform: rotate(8deg);
+}
+
+.login-hero::after {
+  right: 3rem;
+  bottom: -3rem;
+  width: 11rem;
+  height: 6rem;
+  background: #fca700;
+  clip-path: polygon(10% 0, 100% 26%, 82% 100%, 0 75%);
+  transform: rotate(-8deg);
+}
+
+.login-hero h1 {
+  max-width: 12ch;
+  font-size: clamp(2.5rem, 4vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.login-hero .text-base-content\/65,
+.login-hero .text-base-content\/70 {
+  color: rgb(255 255 255 / 78%);
+}
+
+.login-hero .badge-ghost {
+  border-color: rgb(255 255 255 / 28%);
+  color: #ffffff;
+}
+
+.login-hero .select {
+  color: #101214;
+}
+
+@media (max-width: 639px) {
+  .login-hero {
+    padding: 1.5rem;
+  }
+
+  .login-hero::before,
+  .login-hero::after {
+    opacity: 0.5;
+  }
 }

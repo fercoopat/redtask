@@ -64,7 +64,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
     }
   };
   return (
-    <main className="min-h-screen bg-base-200">
+    <main className="min-h-screen bg-base-100">
       <div className="navbar border-b border-base-300 bg-base-100 px-5 sm:px-8">
         <div className="flex-1 gap-3">
           <div className="grid size-9 place-items-center rounded-lg bg-primary text-primary-content">
@@ -94,10 +94,9 @@ export function IssueList({ user }: { user: RedmineUser }) {
       <section className="mx-auto w-full max-w-300 space-y-6 px-5 py-10 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="space-y-2">
-            <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
-              {t("work")}
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight">{t("issues")}</h1>
+            <h1 className="font-charlie-display text-heading font-medium tracking-tight">
+              {t("issues")}
+            </h1>
             <p className="text-base-content/60">{t("issuesDescription")}</p>
           </div>
           {data && (
