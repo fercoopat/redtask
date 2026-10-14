@@ -33,6 +33,7 @@ export function IssueCreateForm({
     canSubmit,
     changeProject,
     isLoading,
+    isValidating,
     retryOptions,
   } = controller;
 
@@ -59,13 +60,13 @@ export function IssueCreateForm({
         ) : null}
         {isLoading && <p role="status">{t("loadingCreateOptions")}</p>}
         {(projectsError || optionsError) && (
-          <Button type="button" onClick={retryOptions}>
+          <Button type="button" disabled={isValidating} onClick={retryOptions}>
             {t("retry")}
           </Button>
         )}
         <fieldset
           className="contents"
-          disabled={isCreating || form.formState.isSubmitting || ambiguous}
+          disabled={isValidating || isCreating || form.formState.isSubmitting || ambiguous}
         >
           <IssueCreateProjectFields
             form={form}

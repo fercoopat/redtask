@@ -11,11 +11,13 @@ export function IssueTable({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  disabled = false,
 }: {
   data: RedmineIssuePage;
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  disabled?: boolean;
 }) {
   const t = useTranslations();
   const format = useFormatter();
@@ -63,6 +65,7 @@ export function IssueTable({
             aria-label={t("issuesPerPage")}
             className="select-sm"
             value={pageSize}
+            disabled={disabled}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
           >
             {issuePageSizes.map((size) => (
@@ -83,7 +86,7 @@ export function IssueTable({
             type="button"
             className="btn btn-sm"
             aria-label={t("firstPage")}
-            disabled={currentPage <= 1}
+            disabled={disabled || currentPage <= 1}
             onClick={() => onPageChange(1)}
           >
             «
@@ -92,7 +95,7 @@ export function IssueTable({
             type="button"
             className="btn btn-sm"
             aria-label={t("previousPage")}
-            disabled={currentPage <= 1}
+            disabled={disabled || currentPage <= 1}
             onClick={() => onPageChange(currentPage - 1)}
           >
             ‹
@@ -101,7 +104,7 @@ export function IssueTable({
             type="button"
             className="btn btn-sm"
             aria-label={t("nextPage")}
-            disabled={currentPage * pageSize >= data.totalCount}
+            disabled={disabled || currentPage * pageSize >= data.totalCount}
             onClick={() => onPageChange(currentPage + 1)}
           >
             ›
@@ -110,7 +113,7 @@ export function IssueTable({
             type="button"
             className="btn btn-sm"
             aria-label={t("lastPage")}
-            disabled={currentPage * pageSize >= data.totalCount}
+            disabled={disabled || currentPage * pageSize >= data.totalCount}
             onClick={() => onPageChange(Math.max(1, Math.ceil(data.totalCount / pageSize)))}
           >
             »

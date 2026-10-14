@@ -33,7 +33,7 @@ Las comprobaciones automáticas y su entorno aislado están descritos en [docs/t
 
 ## Diagnóstico de lectura
 
-Después de iniciar sesión, abre **Diagnóstico** desde la lista de incidencias. Comprueba cinco lecturas con tu cuenta y descarga un informe saneado. Consulta [la guía de diagnóstico](docs/redmine-diagnostics.md).
+Después de iniciar sesión, abre **Diagnóstico** desde **Herramientas de soporte**, al final de la lista de incidencias. Comprueba cinco lecturas con tu cuenta y descarga un informe saneado. Consulta [la guía de diagnóstico](docs/redmine-diagnostics.md).
 
 ## Redmine local de pruebas
 

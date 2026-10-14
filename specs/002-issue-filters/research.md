@@ -24,6 +24,12 @@
 
 **Alternatives considered**: Calling the admin-only endpoint unconditionally would fail for ordinary users. Inferring filterability from issue payload fields can omit fields absent from returned issues and does not establish whether Redmine accepts them as filters.
 
+### Standard filter value choices
+
+**Decision**: Attach names and IDs from Redmine's optional status, tracker, and priority catalogs and from the ordinary visible-project list to the standard filter metadata. Gather author and assignee choices from the memberships of visible projects, matching Redmine's issue-query scope, and deduplicate users across projects. Do not call global `/users.json` or add administrator credentials. If a required catalog is unavailable, explain that choices are unavailable and reject value-requiring criteria rather than ask users to guess IDs. Keep categories and versions unavailable in the global list until project context can provide named options. Manual IDs remain only for explicitly labeled ID filters such as parent issue and watcher. Arbitrary text/name values are not accepted for list filters without a catalog.
+
+**Rationale**: Redmine documents [issue status](https://www.redmine.org/projects/redmine/wiki/Rest_IssueStatuses), [tracker](https://www.redmine.org/projects/redmine/wiki/Rest_Trackers), [priority](https://www.redmine.org/projects/redmine/wiki/Rest_Enumerations), and [visible project](https://www.redmine.org/projects/redmine/wiki/Rest_Projects) catalogs. [Categories](https://www.redmine.org/projects/redmine/wiki/Rest_IssueCategories) and [versions](https://www.redmine.org/projects/redmine/wiki/Rest_Versions) are queried for a specific project, while [listing users](https://www.redmine.org/projects/redmine/wiki/Rest_Users) requires admin privileges. Optional catalogs preserve a usable filter flow on instances that deny or omit a catalog endpoint.
+
 ## Saved filters
 
 **Decision**: Persist personal named filter sets and visible-control preferences in browser storage, keyed by Redmine instance and user identity. Keep these values separate from authentication secrets.

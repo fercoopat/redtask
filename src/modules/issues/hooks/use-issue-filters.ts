@@ -19,9 +19,9 @@ async function fetchIssueFilters(url: string): Promise<IssueFilterOptions> {
 }
 
 export function useIssueFilters() {
-  const { data, error, mutate } = useSWR<IssueFilterOptions, AppApiError>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<IssueFilterOptions, AppApiError>(
     "/api/issues/filters",
     fetchIssueFilters,
   );
-  return { data, error, refresh: mutate };
+  return { data, error, isLoading, isValidating, refresh: mutate };
 }

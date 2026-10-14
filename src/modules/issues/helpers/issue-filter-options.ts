@@ -7,6 +7,7 @@ export type IssueFilterOption = {
   label: string;
   type: IssueFilterType;
   numericKind?: "integer" | "float";
+  allowTypedId?: boolean;
   operators: IssueFilterOperator[];
   values?: { value: string; label: string }[];
 };
@@ -53,8 +54,20 @@ export const standardIssueFilters: IssueFilterOption[] = [
   { field: "assigned_to_id", label: "Asignado a", type: "list", operators: listOps },
   { field: "category_id", label: "Categoría", type: "list", operators: listOps },
   { field: "fixed_version_id", label: "Versión", type: "list", operators: listOps },
-  { field: "parent_id", label: "Incidencia padre (ID)", type: "list", operators: listOps },
-  { field: "watcher_id", label: "Seguidor (ID)", type: "list", operators: listOps },
+  {
+    field: "parent_id",
+    label: "Incidencia padre (ID)",
+    type: "list",
+    allowTypedId: true,
+    operators: listOps,
+  },
+  {
+    field: "watcher_id",
+    label: "Seguidor (ID)",
+    type: "list",
+    allowTypedId: true,
+    operators: listOps,
+  },
   { field: "subject", label: "Asunto", type: "text", operators: [...textOps, ...emptyOps] },
   { field: "description", label: "Descripción", type: "text", operators: textOps },
   { field: "created_on", label: "Creada", type: "date", operators: dateOps },
@@ -93,4 +106,20 @@ export function validateIssueFilters(
   options: IssueFilterOption[],
 ) {
   return createIssueFiltersSchema(options).safeParse(filters).success;
+}
+
+export function formatIssueFilterCriterion(
+  criterion: IssueFilterCriterion,
+  fields: IssueFilterOption[],
+) {
+  const field = fields.find((option) => option.field === criterion.field);
+  const operator = field?.operators.find((option) => option.value === criterion.operator);
+  const value = criterion.value
+    ? (field?.values?.find((option) => option.value === criterion.value)?.label ??
+      (field?.type === "list" ? `#${criterion.value}` : criterion.value))
+    : "";
+
+  return [field?.label ?? criterion.field, operator?.label ?? criterion.operator, value]
+    .filter(Boolean)
+    .join(" ");
 }

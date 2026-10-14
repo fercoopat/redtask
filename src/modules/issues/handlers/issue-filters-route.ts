@@ -1,6 +1,9 @@
 import { clearSession, getAuthenticatedSession } from "@/modules/auth/helpers/session";
-import { standardIssueFilters } from "@/modules/issues/helpers/issue-filter-options";
-import { getRedmineCurrentUser, RedmineRequestError } from "@/modules/redmine/helpers/redmine-api";
+import {
+  getRedmineCurrentUser,
+  getRedmineIssueFilterFields,
+  RedmineRequestError,
+} from "@/modules/redmine/helpers/redmine-api";
 import { getAppConfig } from "@/shared/config";
 import { apiErrorResponse } from "@/shared/errors/api-error";
 import { jsonResponse } from "@/shared/http";
@@ -11,8 +14,9 @@ export async function GET() {
     if (!session) return apiErrorResponse("session_required", 401);
     const user = await getRedmineCurrentUser(session.apiKey);
     if (user.id !== session.userId) throw new RedmineRequestError("unauthorized");
+    const fields = await getRedmineIssueFilterFields(session.apiKey);
     return jsonResponse({
-      fields: standardIssueFilters,
+      fields,
       instance: getAppConfig().redmineBaseUrl,
     });
   } catch (error) {

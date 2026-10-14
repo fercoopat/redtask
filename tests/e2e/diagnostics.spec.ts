@@ -9,7 +9,14 @@ async function login(page: Page, key = "synthetic-A") {
   await page.locator("#apiKey").fill(key);
   await page.getByRole("button", { name: "Conectar con Redmine", exact: true }).click();
   await expect(page).toHaveURL(/\/issues$/);
-  await page.getByRole("link", { name: "Diagnóstico", exact: true }).click();
+  await expect(
+    page.locator(".navbar").getByRole("link", { name: "Diagnóstico", exact: true }),
+  ).toHaveCount(0);
+  const diagnosticLink = page
+    .locator("footer")
+    .getByRole("link", { name: "Diagnóstico", exact: true });
+  await expect(diagnosticLink).toBeVisible();
+  await diagnosticLink.click();
   await expect(page).toHaveURL(/\/diagnostics$/);
   await page.locator("#diagnostic-project").selectOption("1");
 }

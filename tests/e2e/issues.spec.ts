@@ -98,6 +98,25 @@ test("initial list outage is visible and retry recovers", async ({ page, request
   await page.getByRole("button", { name: "Reintentar", exact: true }).click();
   await expect(page.getByText("PRIVATE-1", { exact: true })).toBeVisible();
 });
+test("shows an accessible spinner while filtered issue results load", async ({ page, request }) => {
+  await control(request, { holdList: true });
+  await login(page);
+  await expect(page.getByRole("status").filter({ hasText: "Cargando incidencias…" })).toBeVisible();
+  await expect(page.locator(".loading-spinner")).toBeVisible();
+  await expect.poll(async () => (await stats(request)).listRequests.length).toBeGreaterThan(0);
+  await control(request, { holdList: false, release: "list" });
+  await expect(page.getByText("PRIVATE-1", { exact: true })).toBeVisible();
+  await control(request, { holdList: true });
+  await page.locator("#filter-field").selectOption("done_ratio");
+  await page.locator("#filter-value").fill("50");
+  await page.getByRole("button", { name: "Añadir", exact: true }).click();
+  await expect(page.getByRole("status")).toBeVisible();
+  await expect(page.locator(".loading-spinner")).toBeVisible();
+  await expect.poll(async () => (await stats(request)).listRequests.length).toBeGreaterThan(1);
+  await control(request, { holdList: false, release: "list" });
+  await expect(page.getByText("Actualizando incidencias…")).not.toBeVisible();
+  await expect(page.getByText("PRIVATE-1", { exact: true })).toBeVisible();
+});
 test("account switch cannot reuse previous account data or late responses", async ({
   page,
   request,
@@ -326,6 +345,9 @@ test("slow project options disable submission and ignore a previous project's re
 test("optional priorities absence still allows creation", async ({ page, request }) => {
   await control(request, { prioritiesStatus: 404 });
   await login(page);
+  await page.locator("#filter-field").selectOption("priority_id");
+  await expect(page.getByText("No hay opciones disponibles para este filtro.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Añadir", exact: true })).toBeDisabled();
   await draft(page);
   await expect(page.locator("#issue-priority")).not.toBeVisible();
   await form(page).getByRole("button", { name: "Crear incidencia", exact: true }).click();

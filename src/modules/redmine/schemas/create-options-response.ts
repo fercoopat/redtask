@@ -27,3 +27,13 @@ export const prioritiesResponseSchema = z.object({
   issue_priorities: z.array(projectChoiceSchema),
 });
 export const projectsResponseSchema = z.object({ projects: z.array(projectChoiceSchema) });
+export const projectMembershipsResponseSchema = z.object({
+  memberships: z.array(z.object({ user: projectChoiceSchema.optional() })),
+  total_count: z.number().int().nonnegative(),
+});
+export const issueStatusesResponseSchema = z.object({
+  issue_statuses: z.array(projectChoiceSchema),
+});
+export const trackersResponseSchema = z.object({
+  trackers: z.array(projectChoiceSchema),
+});

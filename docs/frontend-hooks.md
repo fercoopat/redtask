@@ -6,6 +6,8 @@ Los hooks de `src/modules/<feature>/hooks` usan SWR directamente para las operac
 
 Cada hook de feature define la clave, el fetcher y los tipos de la operación, y expone los datos, errores, estados pendientes y acciones de actualización que necesita la interfaz. Mantén el manejo de errores coherente con `src/shared/errors`.
 
+Mientras `isValidating` esté activo, deshabilita los controles que cambian los datos o la clave de la consulta en curso: filtros, filtros guardados, paginación y selectores de opciones. Deshabilita también los campos dependientes mientras se actualizan sus opciones. Mantén disponibles las acciones independientes, como cerrar sesión, y permite reintentar cuando la consulta haya terminado con error.
+
 No añadas una fachada genérica para ocultar SWR. Evita hooks que solo reenvíen una llamada sin aportar contexto de la feature; un hook debe nombrar una operación o flujo propio del dominio.
 
 Los hooks de `src/modules/<feature>/hooks` componen las operaciones remotas y el estado de formularios con las rutas, tipos y reglas de esa feature. Un hook de formulario de feature puede usar React Hook Form y Zod directamente, y exponer los enlaces y errores necesarios para que sus componentes presenten los campos y estados. Mantén la lógica del flujo (validación, envío y errores) en ese hook; el componente mantiene la presentación y coordinación visual.

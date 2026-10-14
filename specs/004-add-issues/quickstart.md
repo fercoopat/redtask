@@ -12,7 +12,7 @@ The project selector currently shows up to 100 projects. Trackers, categories, a
 
 For isolated acceptance against a real Redmine installation, use [the Docker testing guide](../../docs/redmine-local-testing.md). This validates standard errors and permissions against Redmine 6.1.5 locally; T015 combines this evidence with the authorized deployed-instance success flow.
 
-The [read diagnostic](../../docs/redmine-diagnostics.md) performs five checks with the current account and never calls the administrator-only global custom-field endpoint. Read success does not confirm **Add issues**. Project-scoped fields are still used for creation; custom-field filters are deferred.
+The [read diagnostic](../../docs/redmine-diagnostics.md) is a secondary support tool linked from the footer of the issue list. It performs five checks with the current account and never calls the administrator-only global custom-field endpoint. Read success does not confirm **Add issues**. Project-scoped fields are still used for creation; custom-field filters are deferred.
 
 ## Local checks
 
@@ -44,6 +44,7 @@ T015 combines isolated standard-error checks with enterprise verification of pro
 5. In the isolated fixture, make Redmine unavailable during metadata loading and during submission. Confirm a recoverable error is shown and the entered draft remains available. For an ambiguous timeout or server error, confirm the UI reports an unknown outcome, does not auto-resubmit, and requires acknowledgement that Redmine was checked before explicitly retrying.
 6. In the isolated fixture, expire the app session and separately use a revoked API key before submission. Confirm access is denied and the user is directed to authenticate again.
 7. Use the full form with keyboard only. Confirm every control has an accessible name, focus is visible, and validation/status messages are announced.
+8. In the isolated fixture, delay project-list loading and selected-project metadata loading separately. Confirm project/detail fields and submit stay disabled during each request, including revalidation, and become available when current-project metadata arrives. On a settled metadata error, confirm retry is enabled and entered subject/description remain intact. This new delayed-response check is documented but has not yet been separately run.
 
 ## Expected outcome
 

@@ -5,6 +5,7 @@ type Widen<T> = T extends string ? string : T extends object ? { [K in keyof T]:
 const es = {
   diagnostics: {
     title: "Diagnóstico",
+    supportTool: "Herramientas de soporte",
     intro:
       "Comprueba el acceso de lectura de tu cuenta al proyecto seleccionado. Solo se realizan consultas de lectura a Redmine.",
     limit: "El selector muestra hasta 100 proyectos visibles.",
@@ -144,6 +145,8 @@ const es = {
   condition: "Condición",
   value: "Valor",
   selectValue: "Selecciona un valor",
+  filterListIdOnly: "Este filtro requiere un ID numérico de Redmine, no un nombre.",
+  filterOptionsUnavailable: "No hay opciones disponibles para este filtro.",
   filterValue: "Valor del filtro",
   noValueRequired: "No requiere valor",
   add: "Añadir",
@@ -168,6 +171,7 @@ const es = {
   visibleFilterFields: "Campos de filtro visibles",
   retryFilters: "Reintentar filtros",
   loadingIssues: "Cargando incidencias…",
+  refreshingIssues: "Actualizando incidencias…",
   noIssues: "No hay incidencias para mostrar",
   changeFilters: "Prueba a cambiar o quitar algún filtro.",
   noIssuesHint: "Cuando tengas incidencias disponibles, aparecerán aquí.",
@@ -233,6 +237,7 @@ const es = {
 const en = {
   diagnostics: {
     title: "Diagnostics",
+    supportTool: "Support tools",
     intro:
       "Check your account's read access to the selected project. Only read requests are sent to Redmine.",
     limit: "The selector shows up to 100 visible projects.",
@@ -371,6 +376,8 @@ const en = {
   condition: "Condition",
   value: "Value",
   selectValue: "Select a value",
+  filterListIdOnly: "This filter requires a numeric Redmine ID, not a name.",
+  filterOptionsUnavailable: "No options are available for this filter.",
   filterValue: "Filter value",
   noValueRequired: "No value required",
   add: "Add",
@@ -396,6 +403,7 @@ const en = {
   visibleFilterFields: "Visible filter fields",
   retryFilters: "Retry filters",
   loadingIssues: "Loading issues…",
+  refreshingIssues: "Updating issues…",
   noIssues: "No issues to show",
   changeFilters: "Try changing or removing a filter.",
   noIssuesHint: "Available issues will appear here.",

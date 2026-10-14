@@ -1,5 +1,10 @@
+import { z } from "zod";
+
 import type { RedmineUser } from "@/modules/auth/helpers/session";
-import { type IssueFilterCriterion } from "@/modules/issues/helpers/issue-filter-options";
+import {
+  type IssueFilterCriterion,
+  standardIssueFilters,
+} from "@/modules/issues/helpers/issue-filter-options";
 import {
   createdIssueSchema,
   issueCreateOptionsSchema,
@@ -9,9 +14,12 @@ import {
   redmineValidationMessagesSchema,
 } from "@/modules/issues/schemas/issue-creation";
 import {
+  issueStatusesResponseSchema,
   prioritiesResponseSchema,
   projectCreateResponseSchema,
+  projectMembershipsResponseSchema,
   projectsResponseSchema,
+  trackersResponseSchema,
 } from "@/modules/redmine/schemas/create-options-response";
 import { createdIssueResponseSchema } from "@/modules/redmine/schemas/created-issue-response";
 import { currentUserResponseSchema } from "@/modules/redmine/schemas/current-user-response";
@@ -198,6 +206,103 @@ export async function getRedmineCurrentUser(apiKey: string): Promise<RedmineUser
   );
   if (!result.success) throw new RedmineRequestError("unexpected");
   return result.data.user;
+}
+
+export async function getRedmineIssueFilterFields(apiKey: string) {
+  const [statuses, trackers, priorities, projects] = await Promise.all([
+    getOptionalFilterChoices(
+      "issue_statuses.json",
+      "issue_statuses",
+      issueStatusesResponseSchema,
+      apiKey,
+    ),
+    getOptionalFilterChoices("trackers.json", "trackers", trackersResponseSchema, apiKey),
+    getOptionalFilterChoices(
+      "enumerations/issue_priorities.json",
+      "issue_priorities",
+      prioritiesResponseSchema,
+      apiKey,
+    ),
+    getRedmineProjects(apiKey),
+  ]);
+  const users = await getOptionalProjectMemberChoices(apiKey, projects);
+  const valuesByField = new Map([
+    ["status_id", statuses],
+    ["tracker_id", trackers],
+    ["priority_id", priorities],
+    ["project_id", projects],
+    ["author_id", users],
+    ["assigned_to_id", users],
+  ]);
+  return standardIssueFilters.map((field) => {
+    const values = valuesByField.get(field.field);
+    return values?.length
+      ? {
+          ...field,
+          values: values.map(({ id, name }) => ({ value: String(id), label: name })),
+        }
+      : field;
+  });
+}
+
+async function getOptionalProjectMemberChoices(apiKey: string, projects: ProjectChoice[]) {
+  try {
+    const users = new Map<number, string>();
+    // Keep Redmine request fan-out bounded while covering all listed projects.
+    for (let start = 0; start < projects.length; start += 8) {
+      const batch = await Promise.all(
+        projects.slice(start, start + 8).map(async (project) => {
+          const users: ProjectChoice[] = [];
+          let offset = 0;
+          let total = 0;
+          do {
+            const parsed = projectMembershipsResponseSchema.safeParse(
+              await requestRedmine(
+                `projects/${project.id}/memberships.json?limit=100&offset=${offset}`,
+                apiKey,
+              ),
+            );
+            if (!parsed.success) throw new RedmineRequestError("unexpected");
+            total = parsed.data.total_count;
+            users.push(
+              ...parsed.data.memberships.flatMap((membership) =>
+                membership.user ? [membership.user] : [],
+              ),
+            );
+            if (parsed.data.memberships.length === 0 && offset < total)
+              throw new RedmineRequestError("unexpected");
+            offset += parsed.data.memberships.length;
+          } while (offset < total);
+          return users;
+        }),
+      );
+      for (const members of batch) {
+        for (const user of members) users.set(user.id, user.name);
+      }
+    }
+    return [...users]
+      .map(([id, name]) => ({ id, name }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  } catch (error) {
+    if (error instanceof RedmineRequestError && [403, 404, 501].includes(error.status ?? 0))
+      return undefined;
+    throw error;
+  }
+}
+
+async function getOptionalFilterChoices<
+  T extends { [key: string]: ProjectChoice[] },
+  K extends keyof T & string,
+>(path: string, key: K, schema: z.ZodType<T>, apiKey: string): Promise<ProjectChoice[]> {
+  try {
+    const result = schema.safeParse(await requestRedmine(path, apiKey));
+    if (!result.success) throw new RedmineRequestError("unexpected");
+    return result.data[key];
+  } catch (error) {
+    if (error instanceof RedmineRequestError && [403, 404, 501].includes(error.status ?? 0))
+      return [];
+    throw error;
+  }
 }
 
 export async function getRedmineIssues(

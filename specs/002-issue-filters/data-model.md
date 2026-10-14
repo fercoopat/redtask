@@ -2,6 +2,12 @@
 
 Issue records remain owned by Redmine. This feature adds only transient query state and non-secret user preferences.
 
+## Filter Metadata
+
+The standard field/operator catalog is defined by the application and enriched per authenticated Redmine instance. A `values` collection contains string-valued Redmine IDs and display labels for statuses, trackers, priorities, up to 100 projects, and users found in the memberships of those visible projects. Membership users are deduplicated by ID. If a required catalog is unavailable or forbidden, `values` is omitted, the UI explains that choices are unavailable, and the shared schema rejects value-requiring criteria for that field. Project choices come from the ordinary visible-project list, and if that request fails, filter metadata fails to load. Project-scoped category/version fields remain unavailable without project context. Manual numeric IDs are allowed only for fields explicitly identified as ID filters (parent issue and watcher).
+
+Display summaries resolve criterion IDs to the current catalog label without changing the stored or submitted ID. An unresolved list value is displayed as `#<id>`.
+
 ## Filter Criterion
 
 Represents one issue constraint in an active or saved filter.

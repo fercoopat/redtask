@@ -30,7 +30,12 @@ export function IssueList({ user }: { user: RedmineUser }) {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<IssueFilterCriterion[]>([]);
   const [logoutError, setLogoutError] = useState<string | null>(null);
-  const { data: filterData, error: filterError, refresh: refreshFilters } = useIssueFilters();
+  const {
+    data: filterData,
+    error: filterError,
+    isValidating: filterOptionsLoading,
+    refresh: refreshFilters,
+  } = useIssueFilters();
   const fields = filterData?.fields ?? standardIssueFilters;
   const instance =
     filterData?.instance ?? (typeof window !== "undefined" ? window.location.origin : "");
@@ -40,12 +45,13 @@ export function IssueList({ user }: { user: RedmineUser }) {
     Boolean(filterData || filterError),
   );
   const filtersValid = validateIssueFilters(filters, fields);
-  const { data, error, isLoading, refresh } = useIssuesList(
+  const { data, error, isLoading, isValidating, refresh } = useIssuesList(
     page,
     preferences.pageSize,
     filters,
     ready && filtersValid,
   );
+  const issueControlsDisabled = filterOptionsLoading || isValidating;
   const { logout: closeSession, isLoggingOut: isPending } = useLogout();
   const logout = async () => {
     setLogoutError(null);
@@ -69,7 +75,6 @@ export function IssueList({ user }: { user: RedmineUser }) {
           <span className="text-lg font-semibold tracking-tight">Redmine Workspace</span>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/diagnostics">{t("diagnostics.title")}</Link>
           <LocaleSwitcher />
           <div className="hidden text-right sm:block">
             <p className="text-xs text-base-content/55">{t("connectedAs")}</p>
@@ -121,6 +126,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
         <IssueFilterPanel
           availableFields={fields}
           filters={filters}
+          disabled={issueControlsDisabled}
           onChangeFilters={(next) => {
             setFilters(next);
             setPage(1);
@@ -133,6 +139,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
             {t(errorMessageKeys[filterError.code])}
             <Button
               type="button"
+              disabled={filterOptionsLoading}
               onClick={() => {
                 void refreshFilters();
               }}
@@ -148,6 +155,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
             {t(errorMessageKeys[error.code])}
             <Button
               type="button"
+              disabled={isValidating}
               onClick={() => {
                 void refresh();
               }}
@@ -156,8 +164,16 @@ export function IssueList({ user }: { user: RedmineUser }) {
             </Button>
           </Alert>
         ) : !ready || isLoading || !data ? (
-          <Card role="status">
-            <CardBody>{t("loadingIssues")}</CardBody>
+          <Card role="status" aria-live="polite">
+            <CardBody>
+              <div className="flex items-center gap-3">
+                <span
+                  className="loading loading-spinner loading-sm text-primary"
+                  aria-hidden="true"
+                />
+                {t(data ? "refreshingIssues" : "loadingIssues")}
+              </div>
+            </CardBody>
           </Card>
         ) : data.issues.length === 0 ? (
           <Card>
@@ -167,16 +183,41 @@ export function IssueList({ user }: { user: RedmineUser }) {
             </CardBody>
           </Card>
         ) : (
-          <IssueTable
-            data={data}
-            pageSize={preferences.pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={(pageSize) => {
-              setPreferences((current) => ({ ...current, pageSize }));
-              setPage(1);
-            }}
-          />
+          <>
+            {isValidating && (
+              <div
+                className="flex items-center gap-3 rounded-lg border border-base-300 bg-base-100 px-4 py-3 text-sm"
+                role="status"
+                aria-live="polite"
+              >
+                <span
+                  className="loading loading-spinner loading-sm text-primary"
+                  aria-hidden="true"
+                />
+                {t("refreshingIssues")}
+              </div>
+            )}
+            <IssueTable
+              data={data}
+              pageSize={preferences.pageSize}
+              disabled={isValidating}
+              onPageChange={setPage}
+              onPageSizeChange={(pageSize) => {
+                setPreferences((current) => ({ ...current, pageSize }));
+                setPage(1);
+              }}
+            />
+          </>
         )}
+        <footer className="border-t border-base-300 pt-4 text-xs text-base-content/60">
+          <p className="mb-1">{t("diagnostics.supportTool")}</p>
+          <Link
+            className="underline underline-offset-2 hover:text-base-content"
+            href="/diagnostics"
+          >
+            {t("diagnostics.title")}
+          </Link>
+        </footer>
       </section>
     </main>
   );

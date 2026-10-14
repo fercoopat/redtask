@@ -6,16 +6,18 @@ export function IssueFilterVisibility({
   fields,
   visibleFields,
   onChange,
+  disabled = false,
 }: {
   fields: IssueFilterOption[];
   visibleFields: string[];
   onChange: (next: string[]) => void;
+  disabled?: boolean;
 }) {
   const t = useTranslations();
   return (
     <details className="border-t border-base-300 pt-3">
       <summary className="cursor-pointer font-medium">{t("customizeFields")}</summary>
-      <fieldset className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+      <fieldset className="mt-3 flex flex-wrap gap-x-5 gap-y-2" disabled={disabled}>
         <legend className="sr-only">{t("visibleFilterFields")}</legend>
         {fields.map((field) => (
           <label key={field.field} className="label cursor-pointer gap-2">

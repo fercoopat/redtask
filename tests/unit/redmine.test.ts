@@ -4,6 +4,7 @@ import { afterEach, test } from "node:test";
 import {
   createRedmineIssue,
   getRedmineIssueCreateOptions,
+  getRedmineIssueFilterFields,
   getRedmineIssues,
   RedmineRequestError,
 } from "../../src/modules/redmine/helpers/redmine-api";
@@ -92,6 +93,72 @@ test("enriched optional metadata is preserved and requests are protected", async
   const field = (await getRedmineIssueCreateOptions("synthetic-key", 1)).customFields[0];
   assert.equal(field.required, true);
   assert.deepEqual(field.possibleValues, [{ value: "Backend", label: "Backend" }]);
+});
+
+test("issue user filters combine paginated project memberships without global user access", async () => {
+  const members = Array.from({ length: 101 }, (_, index) => ({
+    user: { id: index + 1, name: `User ${String(index + 1).padStart(3, "0")}` },
+  }));
+  const calls: string[] = [];
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    calls.push(url.pathname + url.search);
+    if (url.pathname === "/projects.json")
+      return Response.json({
+        projects: [
+          { id: 1, name: "Project A" },
+          { id: 2, name: "Project B" },
+        ],
+      });
+    if (url.pathname === "/issue_statuses.json") return Response.json({ issue_statuses: [] });
+    if (url.pathname === "/trackers.json") return Response.json({ trackers: [] });
+    if (url.pathname === "/enumerations/issue_priorities.json")
+      return Response.json({ issue_priorities: [] });
+    if (url.pathname === "/projects/1/memberships.json") {
+      const offset = Number(url.searchParams.get("offset"));
+      return Response.json({
+        memberships: members.slice(offset, offset + 100),
+        total_count: members.length,
+      });
+    }
+    if (url.pathname === "/projects/2/memberships.json")
+      return Response.json({
+        memberships: [{ user: { id: 1, name: "User 001" } }, { group: { id: 4, name: "Team" } }],
+        total_count: 2,
+      });
+    assert.fail(`Unexpected Redmine request: ${url.pathname}`);
+  };
+
+  const fields = await getRedmineIssueFilterFields("synthetic-key");
+  for (const fieldName of ["author_id", "assigned_to_id"]) {
+    const field = fields.find((item) => item.field === fieldName);
+    assert.equal(field?.values?.length, 101);
+    assert.deepEqual(field?.values?.[0], { value: "1", label: "User 001" });
+    assert.ok(field?.values?.some(({ value }) => value === "101"));
+  }
+  assert.ok(calls.includes("/projects/1/memberships.json?limit=100&offset=100"));
+  assert.ok(calls.every((path) => path !== "/users.json"));
+});
+
+test("membership permission denial keeps other issue filters available", async () => {
+  globalThis.fetch = async (input) => {
+    const path = new URL(String(input)).pathname;
+    if (path === "/projects.json") return Response.json({ projects: [{ id: 1, name: "Project" }] });
+    if (path === "/issue_statuses.json")
+      return Response.json({ issue_statuses: [{ id: 1, name: "Open" }] });
+    if (path === "/trackers.json") return Response.json({ trackers: [] });
+    if (path === "/enumerations/issue_priorities.json")
+      return Response.json({ issue_priorities: [] });
+    if (path === "/projects/1/memberships.json") return Response.json({}, { status: 403 });
+    assert.fail(`Unexpected Redmine request: ${path}`);
+  };
+
+  const fields = await getRedmineIssueFilterFields("synthetic-key");
+  assert.deepEqual(fields.find((item) => item.field === "status_id")?.values, [
+    { value: "1", label: "Open" },
+  ]);
+  assert.equal(fields.find((item) => item.field === "assigned_to_id")?.values, undefined);
+  assert.equal(fields.find((item) => item.field === "author_id")?.values, undefined);
 });
 
 test("creation sends only validated wire fields and returns a safe issue URL", async () => {

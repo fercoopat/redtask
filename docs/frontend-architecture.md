@@ -34,6 +34,8 @@ Usa nombres completos de clases en mapas de variantes para que Tailwind genere s
 
 Los flujos de la aplicación deben funcionar con la API Key del usuario y sin depender de privilegios administrativos. No consultes `/custom_fields.json`: el [API global de campos personalizados](https://www.redmine.org/projects/redmine/wiki/Rest_CustomFields) exige administrador. Los permisos efectivos los decide Redmine por cuenta y proyecto; una lectura correcta no confirma el permiso **Add issues**.
 
+El catálogo de filtros usa selectores para estados, tipos, prioridades y proyectos cuando Redmine los devuelve a la cuenta actual. Consulta [filtros de incidencias](issue-filters.md) para los catálogos que siguen dependiendo del proyecto o requieren búsqueda de usuarios.
+
 La creación obtiene los campos personalizados del proyecto y conserva la validación de Redmine. El catálogo de filtros es estándar y se comparte entre cliente y servidor; los descriptores `id`/`name` de proyecto no permiten inferir formato ni capacidad de filtrado. El descubrimiento de filtros personalizados para usuarios normales queda pendiente.
 
 Conserva los criterios guardados `cf_*` para que el usuario pueda revisarlos y corregirlos. Impide aplicarlos y devuelve 400 `custom_fields_unavailable` sin consultar incidencias; no elimines criterios silenciosamente ni amplíes resultados. Cargar el catálogo estándar verifica la API Key mediante el usuario actual y conserva el cierre de sesión por revocación. No se añade una restricción de login por rol administrativo.

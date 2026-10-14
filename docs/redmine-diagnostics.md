@@ -3,7 +3,7 @@
 ## Uso
 
 1. Inicia la aplicación con `pnpm dev`. Utiliza el servidor definido en `REDMINE_BASE_URL`; no hay un campo para introducir otra URL.
-2. Inicia sesión con tu API Key y abre **Diagnóstico** desde la lista de incidencias.
+2. Inicia sesión con tu API Key y abre **Diagnóstico** desde **Herramientas de soporte**, al final de la lista de incidencias.
 3. Selecciona un proyecto visible y pulsa **Ejecutar diagnóstico**.
 4. Revisa los resultados y descarga el informe JSON si necesitas comunicarlo al encargado del servidor.
 

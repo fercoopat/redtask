@@ -42,6 +42,7 @@ As a user submitting an issue, I can understand when Redmine rejects the request
 
 - The selected project has different trackers, categories, custom fields, or allowed values than another project; the form must reflect the options available to the user.
 - Redmine accepts the issue but the response is interrupted; the interface must report an unknown outcome, retain the draft, and require the user to verify in Redmine before explicitly retrying. It must not auto-resubmit.
+- Project or field metadata is being fetched or refreshed; dependent form controls cannot be changed or submitted until the current project's options finish validating.
 - The user session expires before submission; the user is asked to authenticate again and is not shown a false success.
 - The issue description is empty or contains long text or special characters; validation and submission must preserve the entered content.
 
@@ -57,6 +58,7 @@ As a user submitting an issue, I can understand when Redmine rejects the request
 - **FR-006**: The system MUST communicate upstream validation, permission, session, and availability failures without exposing credentials or claiming success; when Redmine provides validation details, the system MUST present them in a form the user can act on.
 - **FR-007**: The system MUST prevent repeated submissions while a creation request is pending. After a confirmed rejection, it MUST preserve the draft and allow a retry once the cause is addressed. When the outcome is unknown, it MUST NOT resubmit automatically and MUST ask the user to verify in Redmine before explicitly retrying.
 - **FR-008**: The create-issue flow MUST be usable with keyboard navigation and accessible labels and validation feedback.
+- **FR-009**: While project or project-specific creation options are loading or revalidating, the form MUST disable fields that depend on those options and prevent submission until metadata matches the selected project. A retry control MUST become available after a metadata request fails.
 
 ### Key Entities _(include if data involved)_
 

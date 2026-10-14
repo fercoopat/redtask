@@ -35,6 +35,7 @@ export function useIssueCreateOptions(projectId: number, enabled = true) {
     options: optionsQuery.data,
     optionsError: optionsQuery.error,
     isLoading: projectQuery.isLoading || optionsQuery.isLoading,
+    isValidating: projectQuery.isValidating || optionsQuery.isValidating,
     retryOptions: () => {
       void projectQuery.mutate();
       void optionsQuery.mutate();

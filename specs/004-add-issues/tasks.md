@@ -83,6 +83,7 @@ No setup tasks are needed. The repository, app routes, dependencies, linting, an
 - [x] T017 Add account-scoped read diagnostics with five fixed GET probes, safe JSON export, session handling and automated checks with local creator and reader accounts; document in `docs/redmine-diagnostics.md`. Read diagnostics alone do not complete T015.
 
 - [x] T018 Align ordinary-user scope across diagnostics, standard filters, saved criteria and project-scoped creation metadata; remove the administrator API Key from `scripts/redmine-test/seed.rb` and `tests/redmine/fixture.ts`, adapt automated checks, and update `docs/redmine-diagnostics.md`, `docs/redmine-local-testing.md` and the architecture/testing guides. T015 uses the combined acceptance criterion above.
+- [x] T019 Move the diagnostics link from the issue-list header to a secondary support-tools footer, and update `docs/redmine-diagnostics.md`, the feature quickstart and browser coverage.
 
 ## Dependencies & Execution Order
 
@@ -92,6 +93,8 @@ No setup tasks are needed. The repository, app routes, dependencies, linting, an
 - [x] T020 Align specification status, checklist, plan and acceptance/testing notes with the delivered hooks/schemas/components and the pending SC-003 first-time-user evaluation. Preserve the completed combined T015 acceptance and verify unit/browser tests, lint, TypeScript, format and build.
 
 Follow-up verification on 2026-10-13: 27 unit and 28 simulated-browser tests pass, including cookie removal and valid-session creation. Lint, TypeScript, formatting and production build pass. Production audit has no known vulnerabilities; the full audit retains only the documented development exception for `braces`. The 9 real local results from T015 are retained as prior evidence, not rerun for this follow-up. No enterprise requests or writes were made; SC-003 remains pending.
+
+- [x] T021 Disable project-dependent create-form fields while the project list or selected-project options are loading/revalidating in `src/modules/issues/components/issue-create-form.tsx`, and retain the selected-project submission guard in `src/modules/issues/hooks/use-issue-create-form.ts` and `src/modules/issues/hooks/use-issue-create-options.ts`. Document pending metadata and settled-error retry behavior in `specs/004-add-issues/spec.md`, `specs/004-add-issues/plan.md`, `specs/004-add-issues/contracts/issue-creation.md`, and `specs/004-add-issues/quickstart.md`. The new delayed-response acceptance check is documented but has not yet been separately run.
 
 ### Phase Dependencies
 

@@ -71,9 +71,9 @@ export async function GET(request: Request) {
 
     if (query.filters.some((filter) => filter.field.startsWith("cf_")))
       return apiErrorResponse("custom_fields_unavailable", 400);
-    const validatedFilters = createIssueFiltersSchema(standardIssueFilters).safeParse(
-      query.filters,
-    );
+    const validatedFilters = createIssueFiltersSchema(standardIssueFilters, {
+      allowUncataloguedListIds: true,
+    }).safeParse(query.filters);
     if (!validatedFilters.success) return apiErrorResponse("invalid_issues_filters", 400);
     const page = await getRedmineIssues(session.apiKey, {
       ...query,

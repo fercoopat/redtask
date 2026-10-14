@@ -86,6 +86,10 @@ The structure reflects the delivered creation flow. Schemas and inferred types s
 
 **Structure Decision**: Extend the existing `src/modules/issues` and `src/modules/redmine` feature modules. Keep Next.js route files as thin exports to module handlers, following existing API routes.
 
+## Metadata loading behavior
+
+The create form disables project and detail fields while either the accessible project list or the selected project's options are validating, including SWR background revalidation. Submission remains guarded by the currently selected project and validated matching options. If metadata fails, the form presents the error and enables retry after the request settles; unrelated session controls remain available.
+
 ## Complexity Tracking
 
 No constitution violations or additional architectural layers require justification.

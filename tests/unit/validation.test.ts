@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { sessionRequestSchema } from "../../src/modules/auth/schemas/session";
 import {
+  formatIssueFilterCriterion,
   standardIssueFilters,
   validateIssueFilters,
 } from "../../src/modules/issues/helpers/issue-filter-options";
@@ -15,6 +16,7 @@ import {
   parseIssueListQuery,
 } from "../../src/modules/issues/helpers/issue-list-query";
 import { createIssueFormSchema } from "../../src/modules/issues/schemas/issue-create-form";
+import { createIssueFiltersSchema } from "../../src/modules/issues/schemas/issue-filters";
 import { preferencesSchema } from "../../src/modules/issues/schemas/issue-preferences";
 import { getAppConfig } from "../../src/shared/config";
 
@@ -40,7 +42,17 @@ test("numeric filters match Redmine operators and integer/float bounds", () => {
 test("filters reject invalid IDs, dates, duplicates and excess criteria", () => {
   for (const value of ["0", "-1", "abc", "1.5"])
     assert.equal(filter("project_id", "=", value), false);
-  assert.equal(filter("project_id", "=", "17"), true);
+  assert.equal(filter("project_id", "=", "17"), false);
+  assert.equal(filter("assigned_to_id", "=", "17"), false);
+  assert.equal(filter("parent_id", "=", "17"), true);
+  assert.equal(filter("watcher_id", "=", "17"), true);
+  assert.equal(
+    createIssueFiltersSchema(standardIssueFilters, { allowUncataloguedListIds: true }).safeParse([
+      { field: "project_id", operator: "=", value: "17" },
+    ]).success,
+    true,
+  );
+  assert.equal(filter("assigned_to_id", "=", "Alex"), false);
   assert.equal(filter("due_date", ">=", "2024-02-29"), true);
   assert.equal(filter("due_date", ">=", "2025-02-29"), false);
   assert.equal(filter("status_id", "o"), true);
@@ -62,6 +74,24 @@ test("filters reject invalid IDs, dates, duplicates and excess criteria", () => 
     ),
     false,
   );
+});
+test("filter summaries show catalog labels while keeping IDs as criterion values", () => {
+  const fields = [
+    {
+      field: "assigned_to_id",
+      label: "Asignado a",
+      type: "list" as const,
+      operators: [{ value: "=", label: "es", requiresValue: true }],
+      values: [{ value: "123", label: "Ana García" }],
+    },
+  ];
+  const criterion = { field: "assigned_to_id", operator: "=", value: "123" };
+  assert.equal(formatIssueFilterCriterion(criterion, fields), "Asignado a es Ana García");
+  assert.equal(
+    formatIssueFilterCriterion({ field: "assigned_to_id", operator: "=", value: "456" }, fields),
+    "Asignado a es #456",
+  );
+  assert.equal(criterion.value, "123");
 });
 test("legacy saved operators remain stored verbatim and require review", () => {
   const saved = {

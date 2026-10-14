@@ -6,6 +6,8 @@ All routes are same-origin application routes. Redmine credentials remain server
 
 Returns up to 100 projects visible to the signed-in Redmine account for the project selector. Project visibility does not imply permission to add issues.
 
+In the client, project-dependent creation fields remain disabled while this response is loading or revalidating. A settled error exposes retry; unrelated session actions remain available.
+
 **Success — `200 OK`**
 
 ```json
@@ -17,6 +19,8 @@ Returns up to 100 projects visible to the signed-in Redmine account for the proj
 ## `GET /api/issues/create-options?projectId=12`
 
 Returns creation options for a project after confirming it is visible to the signed-in account. Trackers, categories, and issue custom fields come from the project-scoped `include=trackers,issue_categories,issue_custom_fields` response. Priorities are loaded from `enumerations/issue_priorities.json`; only `404` or `501` from that optional endpoint produces an empty priorities list. Authentication errors, outages and malformed responses remain errors. Custom field formats other than selectable fields render as text inputs; Redmine remains authoritative for format and required-field validation.
+
+While this request is loading or revalidating, all creation fields and submission are disabled until the options correspond to the currently selected project. If it fails, the draft remains available and retry is enabled after the request settles.
 
 **Success — `200 OK`**
 

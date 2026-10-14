@@ -2,6 +2,7 @@
 import { useTranslations } from "next-intl";
 
 import {
+  formatIssueFilterCriterion,
   type IssueFilterCriterion,
   type IssueFilterOption,
   validateIssueFilters,
@@ -18,11 +19,13 @@ export function IssueSavedFilters({
   fields,
   filters,
   savedFilters,
+  disabled = false,
 }: {
   controller: ReturnType<typeof useIssueFilterForm>;
   fields: IssueFilterOption[];
   filters: IssueFilterCriterion[];
   savedFilters: SavedIssueFilter[];
+  disabled?: boolean;
 }) {
   const t = useTranslations();
   const {
@@ -47,12 +50,16 @@ export function IssueSavedFilters({
             id="saved-filter"
             className="select-sm"
             value={selectedSavedId}
+            disabled={disabled}
             onChange={(event) => setSelectedSavedId(event.target.value)}
           >
             <option value="">{t("selectFilter")}</option>
             {savedFilters.map((saved) => (
               <option key={saved.id} value={saved.id}>
-                {saved.name}
+                {saved.name} —{" "}
+                {saved.filters
+                  .map((filter) => formatIssueFilterCriterion(filter, fields))
+                  .join(", ")}
                 {validateIssueFilters(saved.filters, fields) ? "" : ` ${t("needsReview")}`}
               </option>
             ))}
@@ -62,7 +69,9 @@ export function IssueSavedFilters({
       <Button
         type="button"
         className="btn btn-sm"
-        disabled={!selectedSaved || !validateIssueFilters(selectedSaved.filters, fields)}
+        disabled={
+          disabled || !selectedSaved || !validateIssueFilters(selectedSaved.filters, fields)
+        }
         onClick={applySelectedSaved}
       >
         {t("apply")}
@@ -70,7 +79,7 @@ export function IssueSavedFilters({
       <Button
         type="button"
         className="btn btn-sm"
-        disabled={!selectedSaved}
+        disabled={disabled || !selectedSaved}
         onClick={editSelectedSaved}
       >
         {t("editCriteria")}
@@ -78,7 +87,7 @@ export function IssueSavedFilters({
       <Button
         type="button"
         className="btn btn-sm"
-        disabled={!selectedSaved || !validateIssueFilters(filters, fields)}
+        disabled={disabled || !selectedSaved || !validateIssueFilters(filters, fields)}
         onClick={updateSaved}
       >
         {t("update")}
@@ -86,7 +95,7 @@ export function IssueSavedFilters({
       <Button
         type="button"
         className="btn btn-sm btn-error btn-outline"
-        disabled={!selectedSaved}
+        disabled={disabled || !selectedSaved}
         onClick={removeSaved}
       >
         {t("delete")}
@@ -100,6 +109,7 @@ export function IssueSavedFilters({
             className="input-sm"
             maxLength={100}
             value={filterName}
+            disabled={disabled}
             onChange={(event) => setFilterName(event.target.value)}
           />
         </FormField>
@@ -107,6 +117,7 @@ export function IssueSavedFilters({
       <Button
         type="button"
         className="btn btn-sm"
+        disabled={disabled}
         onClick={selectedSaved ? renameSaved : saveCurrentFilter}
       >
         {selectedSaved ? t("rename") : t("saveFilter")}

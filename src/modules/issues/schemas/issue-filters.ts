@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import type { IssueFilterOption } from "@/modules/issues/helpers/issue-filter-options";
 
-export function createIssueFilterSchema(options: IssueFilterOption[]) {
+export function createIssueFilterSchema(
+  options: IssueFilterOption[],
+  { allowUncataloguedListIds = false }: { allowUncataloguedListIds?: boolean } = {},
+) {
   return z
     .object({
       field: z.string().min(1, "invalidFilterField"),
@@ -28,8 +31,10 @@ export function createIssueFilterSchema(options: IssueFilterOption[]) {
       let valid = !value || operator.requiresValue;
       if (operator.requiresValue && field.values)
         valid = field.values.some((item) => item.value === value);
-      if (operator.requiresValue && field.type === "list" && !field.values)
+      if (operator.requiresValue && field.type === "list" && !field.values && field.allowTypedId)
         valid = /^[1-9]\d*$/.test(value);
+      if (operator.requiresValue && field.type === "list" && !field.values && !field.allowTypedId)
+        valid = allowUncataloguedListIds && /^[1-9]\d*$/.test(value);
       if (operator.requiresValue && field.type === "number") {
         valid =
           Number.isFinite(Number(value)) &&
@@ -51,9 +56,12 @@ export function createIssueFilterSchema(options: IssueFilterOption[]) {
     });
 }
 
-export function createIssueFiltersSchema(options: IssueFilterOption[]) {
+export function createIssueFiltersSchema(
+  options: IssueFilterOption[],
+  validationOptions?: { allowUncataloguedListIds?: boolean },
+) {
   return z
-    .array(createIssueFilterSchema(options))
+    .array(createIssueFilterSchema(options, validationOptions))
     .max(20)
     .superRefine((filters, ctx) => {
       const seen = new Set<string>();

@@ -33,7 +33,7 @@ export function useIssueCreateForm(open: boolean, onCreated: (issue: CreatedIssu
     currentProject === projectId &&
     queries.options?.projectId === projectId &&
     !queries.optionsError &&
-    !queries.isLoading;
+    !queries.isValidating;
   useEffect(() => {
     const priority = form.getValues("priorityId");
     if (

@@ -25,9 +25,9 @@ export function useIssuesList(
   enabled: boolean,
 ) {
   const key = enabled ? buildIssueListUrl(page, pageSize, filters) : null;
-  const { data, error, isLoading, mutate } = useSWR<RedmineIssuePage, AppApiError>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<RedmineIssuePage, AppApiError>(
     key,
     fetchIssues,
   );
-  return { data, error, isLoading, refresh: mutate };
+  return { data, error, isLoading, isValidating, refresh: mutate };
 }
