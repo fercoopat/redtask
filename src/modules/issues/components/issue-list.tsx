@@ -91,7 +91,7 @@ export function IssueList({ user }: { user: RedmineUser }) {
           </Button>
         </div>
       </div>
-      <section className="mx-auto w-full max-w-[1200px] space-y-6 px-5 py-10 sm:px-8">
+      <section className="mx-auto w-full max-w-300 space-y-6 px-5 py-10 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="space-y-2">
             <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
