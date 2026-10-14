@@ -16,7 +16,7 @@ export function DiagnosticsPanel() {
   const d = useRedmineDiagnostics();
   return (
     <main className="min-h-screen bg-base-200 px-5 py-10">
-      <Card className="mx-auto max-w-7xl">
+      <Card className="mx-auto max-w-[1200px]">
         <CardBody className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Link href="/issues">{t("issues")}</Link>

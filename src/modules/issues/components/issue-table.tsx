@@ -23,7 +23,7 @@ export function IssueTable({
   const format = useFormatter();
   const currentPage = Math.floor(data.offset / data.limit) + 1;
   return (
-    <div className="overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-sm">
+    <div className="card overflow-hidden rounded-cards">
       <div className="overflow-x-auto">
         <table className="table table-zebra">
           <thead>

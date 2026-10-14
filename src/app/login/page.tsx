@@ -38,7 +38,7 @@ export default async function LoginPage() {
           </div>
         </section>
 
-        <Card className="w-full border border-base-300 bg-base-100 shadow-xl">
+        <Card className="w-full">
           <CardBody className="gap-6 p-7 sm:p-9">
             <div className="space-y-2">
               <p className="text-sm font-medium uppercase tracking-[0.16em] text-primary">
