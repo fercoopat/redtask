@@ -23,32 +23,68 @@ export function IssueTable({
   const format = useFormatter();
   const currentPage = Math.floor(data.offset / data.limit) + 1;
   return (
-    <div className="card overflow-hidden rounded-cards">
+    <div className="records-panel card overflow-hidden rounded-cards">
       <div className="overflow-x-auto">
-        <table className="table table-zebra">
-          <thead>
-            <tr>
-              <th scope="col">ID</th>
-              <th scope="col">{t("subject")}</th>
-              <th scope="col">{t("project")}</th>
-              <th scope="col">{t("status")}</th>
-              <th scope="col">{t("priority")}</th>
-              <th scope="col">{t("assignee")}</th>
-              <th scope="col">{t("updated")}</th>
+        <table className="table responsive-records" role="table">
+          <thead role="rowgroup">
+            <tr role="row">
+              <th scope="col" role="columnheader">
+                ID
+              </th>
+              <th scope="col" role="columnheader">
+                {t("subject")}
+              </th>
+              <th scope="col" role="columnheader">
+                {t("project")}
+              </th>
+              <th scope="col" role="columnheader">
+                {t("status")}
+              </th>
+              <th scope="col" role="columnheader">
+                {t("priority")}
+              </th>
+              <th scope="col" role="columnheader">
+                {t("assignee")}
+              </th>
+              <th scope="col" role="columnheader">
+                {t("updated")}
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             {data?.issues.map((issue) => (
-              <tr key={issue.id}>
-                <th scope="row" className="font-mono text-xs text-base-content/60">
+              <tr key={issue.id} role="row">
+                <th scope="row" role="rowheader" className="tabular-nums text-xs text-muted">
                   #{issue.id}
                 </th>
-                <td className="min-w-64 max-w-xl whitespace-normal font-medium">{issue.subject}</td>
-                <td>{issue.project || "—"}</td>
-                <td>{issue.status || "—"}</td>
-                <td>{issue.priority || "—"}</td>
-                <td>{issue.assignedTo || "—"}</td>
-                <td className="whitespace-nowrap">
+                <td
+                  role="cell"
+                  className="record-title min-w-64 max-w-xl whitespace-normal font-medium"
+                >
+                  <a
+                    href={issue.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-link hover:underline"
+                  >
+                    {issue.subject}
+                  </a>
+                </td>
+                <td role="cell" data-label={t("project")}>
+                  {issue.project || "—"}
+                </td>
+                <td role="cell" data-label={t("status")}>
+                  <span className="badge issue-status whitespace-nowrap">
+                    {issue.status || "—"}
+                  </span>
+                </td>
+                <td role="cell" data-label={t("priority")}>
+                  {issue.priority || "—"}
+                </td>
+                <td role="cell" data-label={t("assignee")}>
+                  {issue.assignedTo || "—"}
+                </td>
+                <td role="cell" data-label={t("updated")} className="whitespace-nowrap">
                   {issue.updatedAt && !Number.isNaN(new Date(issue.updatedAt).valueOf())
                     ? format.dateTime(new Date(issue.updatedAt), { dateStyle: "medium" })
                     : "—"}
@@ -58,7 +94,7 @@ export function IssueTable({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-5 py-3 text-sm">
+      <div className="table-pagination flex flex-wrap items-center justify-between gap-3 border-t border-base-300 px-5 py-3 text-sm">
         <label className="flex items-center gap-2">
           {t("perPage")}
           <Select

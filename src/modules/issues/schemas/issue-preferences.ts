@@ -11,6 +11,8 @@ export const savedFilterSchema = z.object({
 });
 export const preferencesSchema = z.object({
   version: z.literal(1).default(1),
+  view: z.enum(["list", "board"]).default("list"),
+  boardProjectId: z.number().int().positive().nullable().default(null),
   pageSize: z
     .number()
     .refine((n) => issuePageSizes.includes(n as (typeof issuePageSizes)[number]))

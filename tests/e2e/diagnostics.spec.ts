@@ -9,11 +9,9 @@ async function login(page: Page, key = "synthetic-A") {
   await page.locator("#apiKey").fill(key);
   await page.getByRole("button", { name: "Conectar con Redmine", exact: true }).click();
   await expect(page).toHaveURL(/\/issues$/);
-  await expect(
-    page.locator(".navbar").getByRole("link", { name: "Diagnóstico", exact: true }),
-  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Abrir navegación" }).click();
   const diagnosticLink = page
-    .locator("footer")
+    .getByRole("navigation", { name: "Navegación" })
     .getByRole("link", { name: "Diagnóstico", exact: true });
   await expect(diagnosticLink).toBeVisible();
   await diagnosticLink.click();
@@ -100,6 +98,7 @@ test("diagnostic reports are isolated between accounts", async ({ page }) => {
   await login(page);
   await run(page);
   await expect(results(page)).toContainText("Cuenta #1");
+  await page.getByRole("button", { name: "Abrir navegación" }).click();
   await page.getByRole("link", { name: "Incidencias", exact: true }).click();
   await page.getByRole("button", { name: "Cerrar sesión de Redmine" }).click();
   await expect(page).toHaveURL(/\/login$/);

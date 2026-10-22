@@ -1,13 +1,15 @@
 "use client";
 
-import useSWR from "swr";
+import { useCallback } from "react";
+import useSWR, { useSWRConfig } from "swr";
+import { unstable_serialize } from "swr/infinite";
 
 import type { IssueFilterCriterion } from "@/modules/issues/helpers/issue-filter-options";
 import { buildIssueListUrl } from "@/modules/issues/helpers/issue-list-query";
 import type { RedmineIssuePage } from "@/modules/redmine/helpers/redmine-api";
 import { AppApiError, readApiError } from "@/shared/errors/api-error";
 
-async function fetchIssues(url: string): Promise<RedmineIssuePage> {
+export async function fetchIssues(url: string): Promise<RedmineIssuePage> {
   let response: Response;
   try {
     response = await fetch(url, { cache: "no-store" });
@@ -30,4 +32,18 @@ export function useIssuesList(
     fetchIssues,
   );
   return { data, error, isLoading, isValidating, refresh: mutate };
+}
+
+export function useRefreshIssues() {
+  const { cache, mutate } = useSWRConfig();
+  return useCallback(() => {
+    // SWR predicate mutations skip the aggregate keys used by infinite queries.
+    const boardPrefix = unstable_serialize(() => "/api/issues?");
+    const keys = [...cache.keys()].filter(
+      (key) => key.startsWith("/api/issues?") || key.startsWith(boardPrefix),
+    );
+    return Promise.all(
+      keys.map((key) => mutate(key, undefined, { revalidate: true, throwOnError: false })),
+    );
+  }, [cache, mutate]);
 }

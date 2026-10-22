@@ -1,4 +1,5 @@
 "use client";
+import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -6,10 +7,17 @@ import { useIssueCreateForm } from "@/modules/issues/hooks/use-issue-create-form
 import type { CreatedIssue } from "@/modules/issues/schemas/issue-creation";
 import { Alert } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
+import { SidePanel } from "@/shared/ui/side-panel";
 
 import { IssueCreateForm } from "./issue-create-form";
 
-export function IssueCreatePanel({ onCreated }: { onCreated: () => void }) {
+export function IssueCreatePanel({
+  onCreated,
+  projectId,
+}: {
+  onCreated: () => void;
+  projectId?: number | null;
+}) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [created, setCreated] = useState<CreatedIssue | null>(null);
@@ -27,9 +35,12 @@ export function IssueCreatePanel({ onCreated }: { onCreated: () => void }) {
           disabled={controller.isCreating || controller.form.formState.isSubmitting}
           onClick={() => {
             if (open && !controller.ambiguous) controller.reset();
+            if (!open && projectId && !controller.form.getValues("projectId"))
+              controller.changeProject(projectId);
             setOpen(!open);
           }}
         >
+          <Plus size={16} aria-hidden="true" />
           {open ? t("cancel") : t("createIssue")}
         </Button>
         {created && (
@@ -41,9 +52,21 @@ export function IssueCreatePanel({ onCreated }: { onCreated: () => void }) {
           </Alert>
         )}
       </div>
-      <div hidden={!open}>
+      <SidePanel
+        open={open}
+        title={t("createIssue")}
+        onClose={() => {
+          if (
+            !controller.isCreating &&
+            !controller.form.formState.isSubmitting &&
+            !controller.ambiguous
+          )
+            controller.reset();
+          setOpen(false);
+        }}
+      >
         <IssueCreateForm controller={controller} />
-      </div>
+      </SidePanel>
     </>
   );
 }

@@ -19,10 +19,10 @@ pnpm redmine:test:app
 
 La inicialización habilita REST API y crea estos usuarios ficticios:
 
-| Usuario      | Contraseña local     | Permisos                 |
-| ------------ | -------------------- | ------------------------ |
-| `qa-creator` | `LocalRedmineQA123!` | Ver y añadir incidencias |
-| `qa-reader`  | `LocalRedmineQA123!` | Solo ver incidencias     |
+| Usuario      | Contraseña local     | Permisos                         |
+| ------------ | -------------------- | -------------------------------- |
+| `qa-creator` | `LocalRedmineQA123!` | Ver, añadir y editar incidencias |
+| `qa-reader`  | `LocalRedmineQA123!` | Solo ver incidencias             |
 
 La cuenta `admin` con contraseña local `LocalRedmineAdmin123!` se conserva exclusivamente para configurar y mantener esta instalación Docker. No participa en las pruebas de la aplicación y su API Key no se incluye en el fixture.
 
@@ -87,3 +87,9 @@ Estas comprobaciones acreditan la integración con Redmine 6.1.5 local y aportan
 2026-10-13: pasan 9 pruebas reales (7 de incidencias y 2 de diagnóstico), 27 unitarias y 27 de navegador simulado. El diagnóstico se valida con `qa-creator` y `qa-reader`; consulta [redmine-diagnostics.md](redmine-diagnostics.md). El fixture incluye únicamente sus API Keys dentro del volumen y nunca las imprime. T015 sigue pendiente.
 
 2026-10-13, cierre con criterio combinado aprobado por el usuario: T015 completada con la evidencia empresarial de la incidencia 80569 y las pruebas aisladas. Pasan 27 unitarias, 28 de navegador simulado y 9 de Redmine real local, además de lint, tipos y formato. La nueva prueba verifica caducidad con una cookie válida cuya fecha de sesión ya venció, sin enviar la creación a Redmine. No se han realizado nuevas consultas ni escrituras empresariales durante este cierre. Las limitaciones de otras configuraciones permanecen en [la matriz de aceptación](../specs/004-add-issues/quickstart.md#combined-acceptance-evidence); los estados pendientes anteriores son históricos.
+
+## Tablero Kanban
+
+La cuenta local `qa-creator` incluye ahora **Edit issues**, además de ver y añadir incidencias, y utiliza las transiciones del workflow de pruebas. `qa-reader` mantiene únicamente lectura. La cuenta administrativa sigue reservada a infraestructura.
+
+La suite incorpora un movimiento de una incidencia creada para esta prueba: consulta sus estados permitidos, cambia el estado desde el tablero con la cuenta normal y confirma la persistencia mediante REST. Después comprueba que la cuenta de lectura recibe 403 al intentar modificarla y que el estado permanece igual. Las incidencias de aceptación se conservan en este entorno aislado.

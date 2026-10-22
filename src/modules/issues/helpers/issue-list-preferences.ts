@@ -16,12 +16,7 @@ export function readIssuePreferences(userId: number, redmineBaseUrl: string): Is
       JSON.parse(localStorage.getItem(issuePreferencesKey(userId, redmineBaseUrl)) ?? "{}"),
     );
   } catch {
-    return {
-      version: 1,
-      pageSize: 10,
-      visibleFields: ["status_id", "assigned_to_id", "project_id"],
-      savedFilters: [],
-    };
+    return preferencesSchema.parse({});
   }
 }
 export function writeIssuePreferences(

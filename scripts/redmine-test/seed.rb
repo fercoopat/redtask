@@ -25,7 +25,7 @@ ActiveRecord::Base.transaction do
   admin.save!
 
   creator_role = Role.find_or_initialize_by(name: 'Local QA Creator')
-  creator_role.permissions = [:view_issues, :add_issues]
+  creator_role.permissions = [:view_issues, :add_issues, :edit_issues]
   creator_role.save!
   reader_role = Role.find_or_initialize_by(name: 'Local QA Reader')
   reader_role.permissions = [:view_issues]

@@ -44,7 +44,7 @@ export function IssueSavedFilters({
   } = controller;
   return (
     <div className="flex flex-wrap items-end gap-2 border-t border-base-300 pt-4">
-      <div className="min-w-52">
+      <div className="min-w-0 basis-full xl:basis-72">
         <FormField htmlFor="saved-filter" label={t("savedFilters")}>
           <Select
             id="saved-filter"
@@ -100,7 +100,7 @@ export function IssueSavedFilters({
       >
         {t("delete")}
       </Button>
-      <div className="min-w-48 flex-1">
+      <div className="min-w-0 basis-full xl:basis-48 xl:flex-1">
         <FormField htmlFor="filter-name" label={t("filterName")} error={nameError}>
           <Input
             id="filter-name"

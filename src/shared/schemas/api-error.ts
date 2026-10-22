@@ -20,6 +20,9 @@ export const appErrorCodes = [
   "api_key_revoked",
   "issues_forbidden",
   "issues_load_failed",
+  "invalid_spent_time_query",
+  "spent_time_forbidden",
+  "spent_time_load_failed",
   "filters_load_failed",
   "invalid_issue_draft",
   "issue_project_unavailable",
@@ -27,6 +30,12 @@ export const appErrorCodes = [
   "issue_create_forbidden",
   "issue_create_validation",
   "issue_create_unknown",
+  "invalid_issue_status",
+  "issue_status_forbidden",
+  "issue_status_conflict",
+  "issue_status_validation",
+  "issue_status_unknown",
+  "issue_not_found",
 ] as const;
 
 export const appErrorCodeSchema = z.enum(appErrorCodes);

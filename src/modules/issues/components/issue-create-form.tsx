@@ -45,7 +45,6 @@ export function IssueCreateForm({
       aria-label={t("createIssue")}
     >
       <CardBody className="gap-4">
-        <h2 className="text-xl font-semibold">{t("createIssue")}</h2>
         {projectsError ? (
           <AppErrorAlert
             code={

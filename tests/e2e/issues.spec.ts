@@ -107,6 +107,7 @@ test("shows an accessible spinner while filtered issue results load", async ({ p
   await control(request, { holdList: false, release: "list" });
   await expect(page.getByText("PRIVATE-1", { exact: true })).toBeVisible();
   await control(request, { holdList: true });
+  await page.getByText("Filtros", { exact: true }).click();
   await page.locator("#filter-field").selectOption("done_ratio");
   await page.locator("#filter-value").fill("50");
   await page.getByRole("button", { name: "Añadir", exact: true }).click();
@@ -174,13 +175,16 @@ test("project change keeps text and clears project-owned fields", async ({ page,
   expect(payload.custom_fields).toEqual([{ id: 18, value: "Current" }]);
   expect(payload.category_id).toBeUndefined();
 });
-test("pending creation prevents cancellation and duplicate writes", async ({ page, request }) => {
+test("pending creation protects the draft and prevents duplicate writes", async ({
+  page,
+  request,
+}) => {
   await control(request, { createMode: "hold" });
   await login(page);
   await draft(page);
   await form(page).getByRole("button", { name: "Crear incidencia", exact: true }).click();
   await expect.poll(async () => (await stats(request)).creates.length).toBe(1);
-  await expect(page.getByRole("button", { name: "Cancelar", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Cerrar panel", exact: true })).toBeEnabled();
   await expect(page.locator("#issue-subject")).toBeDisabled();
   await form(page).dispatchEvent("submit");
   await form(page).dispatchEvent("submit");
@@ -201,7 +205,7 @@ test("unknown creation retains its acknowledgment guard across hide/reopen", asy
   await expect(
     page.getByText("No se pudo confirmar el resultado.", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await page.getByRole("button", { name: "Cerrar panel", exact: true }).click();
   await page.getByRole("button", { name: "Crear incidencia", exact: true }).click();
   await expect(page.locator("#issue-subject")).toHaveValue("Synthetic issue");
   await expect(form(page).getByRole("button", { name: "Reintentar creación" })).toBeDisabled();
@@ -246,6 +250,7 @@ test("invalid numeric filter shows linked error and never reaches Redmine", asyn
   await login(page);
   await expect(page.getByText("PRIVATE-1", { exact: true })).toBeVisible();
   const count = (await stats(request)).listRequests.length;
+  await page.getByText("Filtros", { exact: true }).click();
   await page.locator("#filter-field").selectOption("done_ratio");
   await expect(page.locator("#filter-operator")).toContainText("mayor o igual que");
   await page.locator("#filter-value").fill("101");
@@ -283,6 +288,7 @@ test("legacy saved filters remain reviewable without sending an invalid query", 
   );
   await login(page);
   await expect(page.getByText("PRIVATE-1", { exact: true })).toBeVisible();
+  await page.getByText("Filtros", { exact: true }).click();
   await page.getByLabel("Filtros guardados", { exact: true }).selectOption("legacy");
   await expect(page.getByRole("button", { name: "Aplicar", exact: true })).toBeDisabled();
   const count = (await stats(request)).listRequests.length;
@@ -345,6 +351,7 @@ test("slow project options disable submission and ignore a previous project's re
 test("optional priorities absence still allows creation", async ({ page, request }) => {
   await control(request, { prioritiesStatus: 404 });
   await login(page);
+  await page.getByText("Filtros", { exact: true }).click();
   await page.locator("#filter-field").selectOption("priority_id");
   await expect(page.getByText("No hay opciones disponibles para este filtro.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Añadir", exact: true })).toBeDisabled();
@@ -388,8 +395,11 @@ test("compiled CSS includes every shared alert and button variant", async ({ pag
 });
 test("English numeric filter conditions are localized correctly", async ({ page }) => {
   await login(page);
+  await page.getByRole("button", { name: "Preferencias de cuenta" }).click();
   await page.getByLabel("Idioma", { exact: true }).selectOption("en");
   await expect(page.getByLabel("Language", { exact: true })).toHaveValue("en");
+  await page.getByRole("button", { name: "Close panel" }).click();
+  await page.getByText("Filters", { exact: true }).click();
   await page.locator("#filter-field").selectOption("estimated_hours");
   await expect(page.locator("#filter-operator")).toContainText("greater than or equal to");
   await expect(page.locator("#filter-operator")).toContainText("less than or equal to");
@@ -474,6 +484,7 @@ test("saved custom criteria stay reviewable and are rejected without widening th
   );
   await login(page);
   await expect(page.getByText("PRIVATE-1", { exact: true })).toBeVisible();
+  await page.getByText("Filtros", { exact: true }).click();
   await page.getByLabel("Filtros guardados", { exact: true }).selectOption("custom");
   await expect(page.getByRole("button", { name: "Aplicar", exact: true })).toBeDisabled();
   const before = await stats(request);
@@ -494,4 +505,34 @@ test("saved custom criteria stay reviewable and are rejected without widening th
     preferenceKey,
   );
   expect(stored[0].filters).toEqual([{ field: "cf_9", operator: "~", value: "Preserved" }]);
+});
+
+test("folding filters preserves drafts and editing an active criterion opens and focuses the editor", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await login(page);
+  await expect(page.getByText("PRIVATE-1", { exact: true })).toBeVisible();
+  const toggle = page.getByText("Filtros", { exact: true });
+  await expect(page.getByRole("form", { name: "Añadir filtro de incidencias" })).not.toBeVisible();
+  await toggle.click();
+  await page.getByLabel("Campo", { exact: true }).selectOption("subject");
+  await page.getByLabel("Valor", { exact: true }).fill("Mi borrador");
+  await toggle.click();
+  await toggle.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("Valor", { exact: true })).toHaveValue("Mi borrador");
+  await page.getByRole("button", { name: "Añadir", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Editar filtro Asunto", exact: true }),
+  ).toBeEnabled();
+  await toggle.click();
+  await page.getByRole("button", { name: "Editar filtro Asunto", exact: true }).click();
+  await expect(page.getByLabel("Campo", { exact: true })).toBeFocused();
+  await expect(page.getByLabel("Valor", { exact: true })).toHaveValue("Mi borrador");
+  await toggle.click();
+  await page.getByRole("button", { name: "Quitar filtro Asunto", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Editar filtro Asunto", exact: true })).toHaveCount(
+    0,
+  );
 });

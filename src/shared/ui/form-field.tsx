@@ -28,7 +28,7 @@ export function FormField({
           {error}
         </span>
       ) : hint ? (
-        <span id={htmlFor ? `${htmlFor}-help` : undefined} className="text-sm text-base-content/60">
+        <span id={htmlFor ? `${htmlFor}-help` : undefined} className="text-sm text-muted">
           {hint}
         </span>
       ) : null}

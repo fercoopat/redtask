@@ -27,7 +27,7 @@ export function DiagnosticsResults({ report }: { report: DiagnosticReport }) {
         })}
       </p>
       <div className="overflow-x-auto">
-        <table className="table">
+        <table className="table min-w-[900px]">
           <caption className="sr-only">{t("results")}</caption>
           <thead>
             <tr>

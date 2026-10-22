@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const namedValueSchema = z.object({ name: z.string() });
+const namedValueSchema = z.object({ id: z.number().int().positive().optional(), name: z.string() });
 const issueResponseSchema = z.object({
   id: z.number().int().positive(),
   subject: z.string(),

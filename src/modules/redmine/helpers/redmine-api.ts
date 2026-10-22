@@ -14,6 +14,12 @@ import {
   redmineValidationMessagesSchema,
 } from "@/modules/issues/schemas/issue-creation";
 import {
+  issueIdSchema,
+  type IssueStatusChange,
+  issueStatusChangeSchema,
+  type IssueStatusInfo,
+} from "@/modules/issues/schemas/issue-status";
+import {
   issueStatusesResponseSchema,
   prioritiesResponseSchema,
   projectCreateResponseSchema,
@@ -23,7 +29,12 @@ import {
 } from "@/modules/redmine/schemas/create-options-response";
 import { createdIssueResponseSchema } from "@/modules/redmine/schemas/created-issue-response";
 import { currentUserResponseSchema } from "@/modules/redmine/schemas/current-user-response";
+import { issueDetailResponseSchema } from "@/modules/redmine/schemas/issue-detail-response";
 import { issueListResponseSchema } from "@/modules/redmine/schemas/issue-list-response";
+import {
+  redmineTimeEntriesResponseSchema,
+  type RedmineTimeEntry,
+} from "@/modules/redmine/schemas/time-entry-response";
 import { getAppConfig } from "@/shared/config";
 
 export type RedmineIssueSummary = {
@@ -31,6 +42,8 @@ export type RedmineIssueSummary = {
   subject: string;
   project: string;
   status: string;
+  statusId: number | null;
+  url: string;
   priority: string;
   assignedTo: string | null;
   updatedAt: string;
@@ -44,7 +57,14 @@ export type RedmineIssuePage = {
 };
 
 export type RedmineFailure =
-  "unauthorized" | "forbidden" | "unavailable" | "validation" | "unexpected";
+  | "unauthorized"
+  | "forbidden"
+  | "unavailable"
+  | "validation"
+  | "unexpected"
+  | "conflict"
+  | "transition"
+  | "update_unknown";
 
 export class RedmineRequestError extends Error {
   constructor(
@@ -61,6 +81,7 @@ export async function requestRedmineResponse(
   path: string,
   apiKey: string,
   body?: unknown,
+  method: "GET" | "POST" | "PUT" = body === undefined ? "GET" : "POST",
 ): Promise<Response> {
   const { redmineBaseUrl } = getAppConfig();
   const url = new URL(path.replace(/^\/+/, ""), `${redmineBaseUrl}/`);
@@ -68,7 +89,7 @@ export async function requestRedmineResponse(
   let response: Response;
   try {
     response = await fetch(url, {
-      method: body === undefined ? "GET" : "POST",
+      method,
       headers: {
         Accept: "application/json",
         "X-Redmine-API-Key": apiKey,
@@ -86,11 +107,17 @@ export async function requestRedmineResponse(
   return response;
 }
 
-async function requestRedmine(path: string, apiKey: string, body?: unknown): Promise<unknown> {
-  const response = await requestRedmineResponse(path, apiKey, body);
+async function requestRedmine(
+  path: string,
+  apiKey: string,
+  body?: unknown,
+  method?: "GET" | "POST" | "PUT",
+): Promise<unknown> {
+  const response = await requestRedmineResponse(path, apiKey, body, method);
   if (!response.ok) {
     if (response.status === 401) throw new RedmineRequestError("unauthorized", [], response.status);
     if (response.status === 403) throw new RedmineRequestError("forbidden", [], response.status);
+    if (response.status === 409) throw new RedmineRequestError("conflict", [], 409);
     if (response.status === 422) {
       const parsed = redmineValidationMessagesSchema.safeParse(
         await response.json().catch(() => null),
@@ -108,6 +135,7 @@ async function requestRedmine(path: string, apiKey: string, body?: unknown): Pro
     throw new RedmineRequestError("unexpected", [], response.status);
   }
 
+  if (response.status === 204) return undefined;
   try {
     return await response.json();
   } catch {
@@ -340,6 +368,8 @@ export async function getRedmineIssues(
       subject: issue.subject,
       project: issue.project?.name ?? "",
       status: issue.status?.name ?? "",
+      statusId: issue.status?.id ?? null,
+      url: new URL(`issues/${issue.id}`, `${getAppConfig().redmineBaseUrl}/`).toString(),
       priority: issue.priority?.name ?? "",
       assignedTo: issue.assigned_to?.name ?? null,
       updatedAt: issue.updated_on ?? "",
@@ -348,4 +378,101 @@ export async function getRedmineIssues(
     offset: result.data.offset,
     limit: result.data.limit,
   };
+}
+
+export async function getRedmineTimeEntries(
+  apiKey: string,
+  userId: number,
+  range: { from: string; to: string },
+): Promise<RedmineTimeEntry[]> {
+  const entries: RedmineTimeEntry[] = [];
+  const seenIds = new Set<number>();
+  const pageSize = 100;
+  let offset = 0;
+  let totalCount: number | undefined;
+
+  while (totalCount === undefined || offset < totalCount) {
+    const params = new URLSearchParams({
+      user_id: String(userId),
+      from: range.from,
+      to: range.to,
+      limit: String(pageSize),
+      offset: String(offset),
+    });
+    const result = redmineTimeEntriesResponseSchema.safeParse(
+      await requestRedmine(`time_entries.json?${params.toString()}`, apiKey),
+    );
+    if (!result.success) throw new RedmineRequestError("unexpected");
+
+    const page = result.data;
+    if (
+      page.offset !== offset ||
+      page.total_count !== (totalCount ?? page.total_count) ||
+      page.time_entries.length > page.limit ||
+      (page.time_entries.length === 0 && offset < page.total_count)
+    ) {
+      throw new RedmineRequestError("unexpected");
+    }
+
+    totalCount = page.total_count;
+    for (const entry of page.time_entries) {
+      if (seenIds.has(entry.id)) throw new RedmineRequestError("unexpected");
+      seenIds.add(entry.id);
+      entries.push(entry);
+    }
+    offset += page.time_entries.length;
+  }
+
+  if (entries.length !== totalCount) throw new RedmineRequestError("unexpected");
+  return entries;
+}
+
+export async function getRedmineIssueStatus(apiKey: string, id: number): Promise<IssueStatusInfo> {
+  if (!issueIdSchema.safeParse(id).success) throw new RedmineRequestError("unexpected");
+  const parsed = issueDetailResponseSchema.safeParse(
+    await requestRedmine(`issues/${id}.json?include=allowed_statuses`, apiKey),
+  );
+  if (!parsed.success || parsed.data.issue.id !== id) throw new RedmineRequestError("unexpected");
+  const issue = parsed.data.issue;
+  return {
+    id,
+    statusId: issue.status.id,
+    status: issue.status.name,
+    updatedAt: issue.updated_on ?? "",
+    url: new URL(`issues/${id}`, `${getAppConfig().redmineBaseUrl}/`).toString(),
+    allowedStatuses: issue.allowed_statuses ?? [],
+  };
+}
+
+export async function changeRedmineIssueStatus(
+  apiKey: string,
+  id: number,
+  input: IssueStatusChange,
+) {
+  const parsed = issueStatusChangeSchema.safeParse(input);
+  if (!parsed.success) throw new RedmineRequestError("unexpected");
+  const { statusId, expectedStatusId } = parsed.data;
+  const current = await getRedmineIssueStatus(apiKey, id);
+  if (current.statusId !== expectedStatusId) throw new RedmineRequestError("conflict", [], 409);
+  if (statusId === current.statusId) return current;
+  if (!current.allowedStatuses.some((status) => status.id === statusId))
+    throw new RedmineRequestError("transition", [], 403);
+  try {
+    await requestRedmine(`issues/${id}.json`, apiKey, { issue: { status_id: statusId } }, "PUT");
+  } catch (error) {
+    if (
+      error instanceof RedmineRequestError &&
+      ["unauthorized", "forbidden", "validation", "conflict"].includes(error.failure)
+    )
+      throw error;
+    throw new RedmineRequestError("update_unknown");
+  }
+  try {
+    const result = await getRedmineIssueStatus(apiKey, id);
+    if (result.statusId !== statusId) throw new RedmineRequestError("update_unknown");
+    return result;
+  } catch (error) {
+    if (error instanceof RedmineRequestError && error.failure === "unauthorized") throw error;
+    throw new RedmineRequestError("update_unknown");
+  }
 }

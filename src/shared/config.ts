@@ -22,5 +22,6 @@ export function getAppConfig() {
   return {
     redmineBaseUrl: result.data.REDMINE_BASE_URL.replace(/\/+$/, ""),
     ironSessionPassword: result.data.IRON_SESSION_PASSWORD,
+    appTimeZone: result.data.APP_TIME_ZONE,
   };
 }

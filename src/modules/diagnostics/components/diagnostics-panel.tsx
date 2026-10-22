@@ -1,8 +1,7 @@
 "use client";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-import { LocaleSwitcher } from "@/shared/i18n/locale-switcher";
+import { Alert } from "@/shared/ui/alert";
 import { AppErrorAlert } from "@/shared/ui/app-error-alert";
 import { Button } from "@/shared/ui/button";
 import { Card, CardBody } from "@/shared/ui/card";
@@ -15,21 +14,22 @@ export function DiagnosticsPanel() {
   const t = useTranslations();
   const d = useRedmineDiagnostics();
   return (
-    <main className="min-h-screen bg-base-200 px-5 py-10">
-      <Card className="mx-auto max-w-[1200px]">
+    <section className="space-y-6">
+      <header className="workspace-page-header space-y-2">
+        <h1 className="text-heading font-semibold">{t("diagnostics.title")}</h1>
+        <p className="text-muted">{t("diagnostics.supportTool")}</p>
+      </header>
+      <Card className="max-w-5xl">
         <CardBody className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <Link href="/issues">{t("issues")}</Link>
-            <LocaleSwitcher />
-          </div>
-          <h1 className="text-3xl font-semibold">{t("diagnostics.title")}</h1>
-          <p>{t("diagnostics.intro")}</p>
-          <p>{t("diagnostics.limit")}</p>
+          <Alert variant="info" className="block space-y-2">
+            <p>{t("diagnostics.intro")}</p>
+            <p className="text-sm">{t("diagnostics.limit")}</p>
+          </Alert>
           {d.projectsError && <AppErrorAlert code={d.projectsError.code} />}
           {d.projectsError && <Button onClick={d.retryOptions}>{t("retry")}</Button>}
           {d.isLoading && <p role="status">{t("loadingCreateOptions")}</p>}
           <div className="flex flex-wrap items-end gap-4">
-            <div className="grid gap-2">
+            <div className="grid min-w-0 w-full gap-2 sm:w-auto sm:flex-1">
               <label htmlFor="diagnostic-project">{t("project")}</label>
               <Select
                 id="diagnostic-project"
@@ -56,10 +56,10 @@ export function DiagnosticsPanel() {
             </Button>
           </div>
           {d.error && <AppErrorAlert code={d.error.code} />}
-          <p>{t("diagnostics.creationUnchecked")}</p>
+          <Alert variant="warning">{t("diagnostics.creationUnchecked")}</Alert>
           {d.report && <DiagnosticsResults report={d.report} />}
         </CardBody>
       </Card>
-    </main>
+    </section>
   );
 }

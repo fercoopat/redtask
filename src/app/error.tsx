@@ -14,7 +14,7 @@ export default function ErrorPage({
   const t = useTranslations();
   return (
     <main className="grid min-h-screen place-items-center bg-base-200 p-6">
-      <section className="w-full max-w-lg space-y-4 rounded-box bg-base-100 p-8 shadow">
+      <section className="w-full max-w-lg space-y-4 rounded-box border border-base-300 bg-base-100 p-8">
         <h1 className="text-2xl font-semibold">{t("appErrorTitle")}</h1>
         <Alert variant="error">{t("appErrorBody")}</Alert>
         <Button variant="primary" onClick={reset}>

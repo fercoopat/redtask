@@ -15,7 +15,7 @@ export default function GlobalError({
     <html lang="es" data-theme="light">
       <body className="min-h-screen bg-base-200 font-sans">
         <main className="grid min-h-screen place-items-center p-6">
-          <section className="w-full max-w-lg space-y-4 rounded-box bg-base-100 p-8 shadow">
+          <section className="w-full max-w-lg space-y-4 rounded-box border border-base-300 bg-base-100 p-8">
             <h1 className="text-2xl font-semibold">Algo salió mal / Something went wrong</h1>
             <Alert variant="error">
               Se produjo un error inesperado. / An unexpected error occurred.
